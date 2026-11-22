@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { api } from '../api/client';
 import { useCommand, useWsQuery } from '../api/hooks';
 import { useWorkspace } from '../app/workspace';
 import { Card, FormError, KeyValue, Notice, PageHeader, Query, StatusBadge, Tabs } from '../components/ui';
+import { AuthenticatorSetup } from '../components/security';
 import { date, humanize, relative } from '../lib/format';
 
 interface Prefs { email_enabled: boolean; email_digest: string; quiet_start?: string | null; quiet_end?: string | null; timezone: string; muted_kinds?: string[] | null }
@@ -13,34 +12,15 @@ interface App { client_id: string; name: string | null; scopes: string[]; connec
 
 function Security() {
   const { me } = useWorkspace();
-  const qc = useQueryClient();
-  const [enroll, setEnroll] = useState<{ secret: string; otpauth_uri: string } | null>(null);
-  const [code, setCode] = useState('');
-  const [err, setErr] = useState<unknown>(null);
   const [ok, setOk] = useState(false);
   const sessions = useWsQuery<Session[]>(['sessions'], 'access/sessions');
   const revoke = useCommand('access/sessions/revoke-others');
-  const start = async () => { setErr(null); try { const r = await api<{ data: { secret: string; otpauth_uri: string } }>('stepup/enroll', { body: {} }); setEnroll(r.data); } catch (e) { setErr(e); } };
-  const confirm = async () => { setErr(null); try { await api('stepup/verify', { body: { code } }); setOk(true); setEnroll(null); void qc.invalidateQueries({ queryKey: ['me'] }); } catch (e) { setErr(e); } };
   return (
     <div className="space-y-6">
       <Card title="Authenticator (step-up)" subtitle="Required for access changes, approvals, exports and sharing.">
         {ok && <Notice tone="success">Authenticator confirmed.</Notice>}
-        <p className="text-sm">Status: <StatusBadge status={me.user.stepup_enrolled ? 'active' : 'pending'} label={me.user.stepup_enrolled ? 'Enrolled' : 'Not set up'} /></p>
-        {!enroll ? (
-          <button className="btn-secondary mt-4" onClick={start}>{me.user.stepup_enrolled ? 'Replace authenticator' : 'Set up authenticator'}</button>
-        ) : (
-          <div className="mt-4 space-y-3">
-            <p className="text-sm">Add this account in your authenticator app (1Password, Authy, Google Authenticator) using the setup key, or open the link on your phone.</p>
-            <p className="rounded bg-sunken p-2 font-mono text-sm tracking-wider">{enroll.secret.replace(/(.{4})/g, '$1 ').trim()}</p>
-            <a className="link text-sm" href={enroll.otpauth_uri}>Open in authenticator app</a>
-            <div className="flex items-end gap-3">
-              <label className="field w-40"><span>6-digit code</span><input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} /></label>
-              <button className="btn-primary" disabled={code.length !== 6} onClick={confirm}>Confirm</button>
-            </div>
-          </div>
-        )}
-        <div className="mt-3"><FormError error={err} /></div>
+        <p className="mb-4 text-sm">Status: <StatusBadge status={me.user.stepup_enrolled ? 'active' : 'pending'} label={me.user.stepup_enrolled ? 'Enrolled' : 'Not set up'} /></p>
+        <AuthenticatorSetup replacing={me.user.stepup_enrolled} onDone={() => setOk(true)} />
       </Card>
       <Card title="Sessions" actions={<button className="btn-secondary btn-sm" onClick={() => revoke.mutate({})}>Sign out other sessions</button>}>
         <Query q={sessions}>

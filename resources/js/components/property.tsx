@@ -8,6 +8,7 @@ import { Card, Dialog, FormError, KeyValue, Money, Notice, Query, Stat, StatusBa
 import { ResourceForm, useMetaFor, useScopes } from './resource';
 import { date, humanize, money, pct } from '../lib/format';
 import { RecordedDocumentsPanel } from './title';
+import { JobStatus } from './security';
 
 export interface Parcel {
   pin: string; mun_code: string | null; municipality: string | null; county: string | null; block: string | null; lot: string | null; qualifier: string | null;
@@ -372,10 +373,19 @@ export function PublicRecordsPanel({ property }: { property: AnyRecord }) {
   const lookups = useResourceList('property_lookups', { filter: { property_id: p.id }, limit: 1 });
   const links = ((lookups.data?.data[0]?.result as { links?: LookupResult['links'] } | undefined)?.links) ?? [];
   const [open, setOpen] = useState(false);
+  const county = useCommand<Record<string, never>, { job: { id: string } }>(`properties/${p.id}/county-records`);
+  const [countyJob, setCountyJob] = useState<string | null>(null);
+  const monmouth = String(p.county ?? '').toUpperCase() === 'MONMOUTH' && !!p.block && !!p.lot;
   return (
     <div className="space-y-4">
       <Card title="Public records" subtitle={p.records_refreshed_at ? `${p.records_source ?? ''} · refreshed ${date(p.records_refreshed_at as string)}` : 'Not looked up yet'}
-        actions={<button className="btn-primary btn-sm" onClick={() => setOpen(true)}>{p.records_refreshed_at ? 'Refresh' : 'Look up records'}</button>}>
+        actions={<div className="flex flex-wrap gap-2">
+          {monmouth && <button className="btn-secondary btn-sm" disabled={county.isPending} title="Tax-board record card (assessment & tax history, sales) and County Clerk index (instrument numbers, recording dates)"
+            onClick={() => county.mutate({}, { onSuccess: (r) => setCountyJob(r.job.id) })}>Pull county records</button>}
+          <button className="btn-primary btn-sm" onClick={() => setOpen(true)}>{p.records_refreshed_at ? 'Refresh' : 'Look up records'}</button>
+        </div>}>
+        {countyJob && <div className="mb-4"><JobStatus jobId={countyJob} label="County tax card & clerk index" /></div>}
+        <FormError error={county.error} />
         <KeyValue items={[
           ['Verified address', String(p.normalized_address ?? '—')], ['County / municipality', [p.county, p.municipality].filter(Boolean).join(' · ') || '—'],
           ['Block / lot / qualifier', p.block ? `${p.block} / ${p.lot ?? '—'}${p.qualifier ? ` / ${p.qualifier}` : ''}` : '—'],

@@ -115,6 +115,7 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::post('/real-estate/lookup', [PropertyController::class, 'lookup']);
         Route::post('/properties/{property}/public-records', [PropertyController::class, 'applyPublicRecords']);
         Route::get('/collateral/{type}/{id}', [PropertyController::class, 'financing'])->where(['type' => 'property|asset', 'id' => $ulid]);
+        Route::post('/properties/{property}/county-records', [PropertyController::class, 'countyRecords'])->where('property', $ulid);
         Route::get('/properties/{property}/comps', [PropertyController::class, 'comps'])->where('property', $ulid);
         Route::post('/estimates/{type}/{id}', [PropertyController::class, 'recordEstimate'])->where(['type' => 'property|asset', 'id' => $ulid]);
         Route::post('/valuations/{valuation}/decision', [PropertyController::class, 'decideValuation']);

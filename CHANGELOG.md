@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — Monmouth County records
+
+### Implemented
+- "Pull county records" (job `property.county_records`): reads the Monmouth tax-board record card (full tax-list history
+  of land/improvement/total assessments, last/this-year taxes, SR1A sales with book/page, price, NU code, grantee) and
+  looks up each deed/mortgage book & page in the County Clerk OPRS index (instrument number, recording date, parties,
+  document type). Manual entries are never overwritten; re-running enriches in place.
+- Owner decision: the tax-board host's robots.txt (`Disallow: /`) is not honored. Requests are on demand, one property at a
+  time, identified by user agent, and paced.
+
+### Verified
+- Parsers checked live against one real card and OPRS book/page search; `CountyRecordsTest` uses fictional fixtures.
+
+### Not implemented
+- OPRS document images: the viewer step redirects automated sessions to an error page; images are still attached
+  manually. OPRS name and block/lot searches currently fail on the county side (empty municipality/type lists).
+- Ocean County: the clerk search is a Windows desktop application; no web interface to read.
+
 ## Unreleased — property value estimates
 
 ### Implemented

@@ -112,6 +112,17 @@ class PropertyController extends ApiController
         return $this->ok((new TitleService($this->ctx()))->set($type, $id, $r->only(['title_form', 'effective_from', 'owners', 'evidence_document_id'])));
     }
 
+    public function countyRecords(string $property): JsonResponse
+    {
+        $row = (new ResourceService($this->ctx()))->find('properties', $property, 'write');
+        if (strtoupper((string) $row->county) !== 'MONMOUTH' || ! $row->block || ! $row->lot) {
+            throw ApiError::unsupported('County tax cards and clerk records are integrated for Monmouth County parcels with a block and lot. Look up public records first.');
+        }
+        $job = app(\App\Jobs\JobService::class)->enqueue($this->ctx(), 'property.county_records', ['property_id' => $row->id], 'property', $row->id, $row->scope_id);
+
+        return $this->accepted($job->present());
+    }
+
     public function comps(string $property): JsonResponse
     {
         $row = (new ResourceService($this->ctx()))->find('properties', $property);

@@ -36,9 +36,10 @@ final class JobService
         'report.build' => Handlers\ReportBuildHandler::class,
         'yearclose.build' => Handlers\YearCloseHandler::class,
         'integration.sync' => Handlers\IntegrationSyncHandler::class,
+        'property.county_records' => Handlers\CountyRecordsHandler::class,
     ];
 
-    public const BULK = ['plan.montecarlo', 'plan.stress', 'import.normalize', 'document.extract', 'document.scan', 'report.build', 'yearclose.build', 'tax.strategies', 'integration.sync'];
+    public const BULK = ['plan.montecarlo', 'plan.stress', 'import.normalize', 'document.extract', 'document.scan', 'report.build', 'yearclose.build', 'tax.strategies', 'integration.sync', 'property.county_records'];
 
     /** Job-local directory for the job being executed (runner file paths must stay inside it). */
     public static ?string $currentWorkDir = null;

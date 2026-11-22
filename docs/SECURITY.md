@@ -54,5 +54,8 @@ access grants, OAuth tokens, `APP_KEY`, `VAULT_ROOT_KEY`, backup key, DB credent
   `source_connections.credential_encrypted`, never returned by the API (only a short hint), and entering or approving them
   requires step-up. Tool output is parsed as data only; nothing is forwarded to a model. Rotating `APP_KEY` requires
   re-entering integration credentials.
+- County records (Monmouth): `tax1.co.monmouth.nj.us` record cards and `oprs.co.monmouth.nj.us` index searches, run as a
+  background job per property with an identifying user agent and pacing. Robots.txt on the tax-board host is not honored
+  by owner decision. Grantor/grantee names are stored as identity-sensitive fields.
 - MFA at McNutt Cloud is not asserted in the SSO payload, hence the app's own TOTP step-up.
 - Backups exclude `legacy.env` by design; losing the escrowed env makes vault files unrecoverable.

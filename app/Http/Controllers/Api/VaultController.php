@@ -67,6 +67,23 @@ class VaultController extends ApiController
             'employment_id' => $r->input('employment_id'), 'engine' => $r->input('engine')], 'document', $doc->id, $doc->scope_id)->present());
     }
 
+    /** Paystub drafts waiting for approval, with the headline values. */
+    public function pendingPaychecks(): JsonResponse
+    {
+        $rows = $this->ctx()->constrain(DB::table('document_extractions'), 'vault', 'read')->where('schema', 'paystub')->where('status', 'needs_review')
+            ->whereNull('archived_at')->orderByDesc('created_at')->limit(50)->get();
+        $emps = DB::table('employments')->whereIn('id', $rows->where('target_type', 'employment')->pluck('target_id'))->pluck('employer_name', 'id');
+
+        return $this->ok($rows->map(function ($x) use ($emps) {
+            $f = json_decode((string) $x->fields, true) ?: [];
+
+            return ['id' => $x->id, 'engine' => $x->engine, 'provided_by' => $x->engine === 'assistant' ? $x->model : null, 'document_id' => $x->document_id,
+                'employer' => $emps[$x->target_id] ?? ($f['employer']['value'] ?? null), 'pay_date' => $f['pay_date']['value'] ?? null,
+                'gross' => $f['gross']['current'] ?? null, 'net' => $f['net']['current'] ?? null, 'created_at' => $x->created_at,
+                'checks_failed' => count(array_filter(json_decode((string) $x->checks, true) ?: [], fn ($c) => ! ($c['passed'] ?? true)))];
+        })->values());
+    }
+
     public function approvePaystub(Request $r, PayrollService $svc, string $extraction): JsonResponse
     {
         $this->privileged();

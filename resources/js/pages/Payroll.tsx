@@ -1,11 +1,45 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ws } from '../api/client';
-import { useResourceList } from '../api/hooks';
+import { useResourceList, useWsQuery } from '../api/hooks';
 import { useWorkspace } from '../app/workspace';
-import { Card, FormError, Notice, PageHeader } from '../components/ui';
+import { Card, FormError, Money, Notice, PageHeader } from '../components/ui';
+import { date, humanize } from '../lib/format';
 import { ResourceSection, useScopes } from '../components/resource';
 import { JobStatus } from '../components/security';
+
+interface Pending { id: string; engine: string; provided_by: string | null; document_id: string | null; employer: string | null; pay_date: string | null; gross: string | null; net: string | null;
+  created_at: string; checks_failed: number }
+
+/** Paystub drafts (from uploads, Claude or ChatGPT) that still need "Approve paycheck". */
+function PendingPaychecks() {
+  const { path } = useWorkspace();
+  const q = useWsQuery<Pending[]>(['payroll-pending'], 'payroll/pending');
+  const rows = q.data ?? [];
+  if (rows.length === 0) return null;
+  return (
+    <Card title="Paychecks to approve" subtitle="Nothing reaches payroll or your tax forecast until you approve it." pad={false}>
+      <div className="table-wrap">
+        <table className="data-table">
+          <caption className="sr-only">Paystub drafts awaiting approval</caption>
+          <thead><tr><th>Pay date</th><th>Employer</th><th className="text-right">Gross</th><th className="text-right">Net</th><th>From</th><th><span className="sr-only">Action</span></th></tr></thead>
+          <tbody>{rows.map((r) => (
+            <tr key={r.id}>
+              <td>{r.pay_date ? date(r.pay_date) : '—'}</td>
+              <td>{r.employer ?? '—'}</td>
+              <td className="text-right"><Money value={r.gross} cents /></td>
+              <td className="text-right"><Money value={r.net} cents /></td>
+              <td className="text-xs">{r.provided_by ? `Values from ${r.provided_by}` : r.document_id ? 'Read from upload' : humanize(r.engine)}
+                {r.checks_failed > 0 && <span className="block text-warning">{r.checks_failed} check{r.checks_failed === 1 ? '' : 's'} to look at</span>}</td>
+              <td className="text-right"><Link className="btn-primary btn-sm" to={path(`extractions/${r.id}`)}>Review &amp; approve</Link></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
 
 export default function Payroll() {
   const { id } = useWorkspace();
@@ -39,6 +73,7 @@ export default function Payroll() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Earnings" title="Payroll" description="Capture paystubs (camera, PDF or ChatGPT), review the page-backed extraction, and approve. Approval refreshes your federal and NJ forecast." />
+      <PendingPaychecks />
       <Card title="Add a paystub">
         <form onSubmit={upload} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <label className="field"><span>Employment</span><select value={emp} onChange={(e) => setEmp(e.target.value)} required><option value="">— Select —</option>{(employments.data?.data ?? []).map((e) => <option key={e.id} value={e.id}>{e._title}</option>)}</select></label>

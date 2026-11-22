@@ -37,6 +37,7 @@ function Item({ item }: { item: AnyRecord }) {
         </div>
       </div>
       <FormError error={resolve.error} />
+      {(resolve.error as { code?: string } | null)?.code === 'approve_on_draft' && target && <Link className="btn-primary btn-sm mt-2" to={path(target)}>Open the draft to approve</Link>}
     </li>
   );
 }

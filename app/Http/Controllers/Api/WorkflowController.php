@@ -72,7 +72,7 @@ class WorkflowController extends ApiController
         if ($row->kind === 'extraction_review') {
             // Values only reach payroll through the draft's Approve (checks + step-up); the inbox can only discard the draft.
             if ($status === 'resolved') {
-                throw ApiError::conflict('Open the draft and use "Approve paycheck" — resolving here would not record the paycheck.');
+                throw new ApiError('approve_on_draft', 'Open the draft (Review & approve) and use "Approve paycheck" — resolving here would not record the paycheck.', 409);
             }
             DB::table('document_extractions')->where('workspace_id', $ctx->workspace->id)->where('id', $row->subject_id)->where('status', 'needs_review')
                 ->update(['status' => 'rejected', 'reviewed_by' => $ctx->user->id, 'updated_at' => now()]);

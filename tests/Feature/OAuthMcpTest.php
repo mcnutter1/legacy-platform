@@ -182,6 +182,9 @@ class OAuthMcpTest extends TestCase
         $this->assertSame(0, DB::table('compute_jobs')->where('type', 'document.extract')->count());
 
         // Approving in the app creates the paycheck from the provided values.
+        $pending = collect($this->signIn($u)->getJson($this->wsUrl($ws, 'payroll/pending'))->assertOk()->json('data'))->firstWhere('id', $ex->id);
+        $this->assertSame(['2026-11-13', 'Example Corp'], [$pending['pay_date'], $pending['employer']]);
+        $this->signIn($u)->getJson($this->wsUrl($ws, "r/document_extractions/{$ex->id}"))->assertOk()->assertJsonPath('data.status', 'needs_review');
         $item = DB::table('review_items')->where('subject_id', $ex->id)->value('id');
         $this->signIn($u)->send('POST', $this->wsUrl($ws, "review/{$item}/resolve"), ['status' => 'resolved'])->assertStatus(409);
         $this->assertSame('open', DB::table('review_items')->where('id', $item)->value('status'), 'the inbox cannot mark a paycheck done without approving it');

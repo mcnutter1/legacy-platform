@@ -32,3 +32,4 @@ Thumbs.db
 /dist
 /storage/app/private-vault
 /storage/app/jobs
+/runners/build

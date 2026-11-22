@@ -513,6 +513,35 @@ final class Registry
                 'list' => ['query', 'selected_pin', 'created_at'],
                 'sensitive' => ['query' => 'identity', 'result' => 'identity'],
             ],
+            'property_tax_years' => [
+                'domain' => 'real_estate', 'label' => 'Assessments & property tax', 'order' => ['tax_year', 'desc'], 'parent' => 'property_id',
+                'fields' => [
+                    'property_id' => 'ref:properties!', 'tax_year' => 'y!', 'assessed_land' => 'm', 'assessed_improvement' => 'm', 'assessed_total' => 'm',
+                    'exemptions' => 'm', 'tax_amount' => 'm', 'property_class' => 's', 'source' => '~s', 'as_of' => 'd', 'notes' => 't',
+                ],
+                'list' => ['tax_year', 'assessed_land', 'assessed_improvement', 'assessed_total', 'tax_amount', 'source'],
+            ],
+            'property_tax_installments' => [
+                'domain' => 'real_estate', 'label' => 'Property tax installments', 'order' => ['due_on', 'desc'], 'parent' => 'property_id',
+                'fields' => [
+                    'property_id' => 'ref:properties!', 'tax_year' => 'y!', 'quarter' => 'i!', 'due_on' => 'd!', 'amount' => 'm',
+                    'status' => 'e:projected|billed|paid|appealed|waived', 'paid_on' => '~d', 'paid_amount' => '~m', 'expense_id' => '~s', 'source' => '~s', 'notes' => 't',
+                ],
+                'list' => ['tax_year', 'quarter', 'due_on', 'amount', 'status', 'paid_on', 'paid_amount'],
+                'filters' => ['tax_year'],
+                'date' => 'due_on',
+            ],
+            'recorded_instruments' => [
+                'domain' => 'real_estate', 'label' => 'Recorded documents', 'order' => ['recorded_on', 'desc'], 'parent' => 'property_id',
+                'fields' => [
+                    'property_id' => 'ref:properties!', 'kind' => 'e:deed|mortgage|mortgage_satisfaction|assignment|lien|lien_release|easement|lis_pendens|survey|other!',
+                    'recorded_on' => 'd', 'book' => 's', 'page' => 's', 'instrument_number' => 's', 'grantor' => 't', 'grantee' => 't', 'consideration' => 'm',
+                    'county' => 's', 'source' => '~s', 'document_id' => 'ref:documents', 'liability_id' => 'ref:liabilities', 'notes' => 't',
+                ],
+                'list' => ['kind', 'recorded_on', 'book', 'page', 'instrument_number', 'consideration', 'document_id', 'source'],
+                'sensitive' => ['grantor' => 'identity', 'grantee' => 'identity'],
+                'patterns' => ['book' => '/^[A-Za-z0-9-]{1,16}$/', 'page' => '/^[A-Za-z0-9-]{1,16}$/'],
+            ],
             'property_stays' => [
                 'domain' => 'real_estate', 'label' => 'Stays & bookings', 'order' => ['check_in', 'desc'], 'parent' => 'property_id',
                 'fields' => [

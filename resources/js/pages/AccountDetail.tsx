@@ -5,6 +5,7 @@ import { useMetaFor, ResourceForm, ResourceSection } from '../components/resourc
 import { Card, Dialog, KeyValue, Notice, PageHeader, Query, StatusBadge, Tabs } from '../components/ui';
 import { humanize, pct } from '../lib/format';
 import { AccountSources } from '../components/sourcesPanel';
+import { TitlePanel } from '../components/title';
 import { recordSources, SourceIcons } from '../components/sources';
 
 interface Perf { status: string; message?: string; start_value?: number; end_value?: number; net_flows?: number; time_weighted?: { cumulative: number; annualized: number | null }; money_weighted?: { irr_annualized: number }; explanation?: string }
@@ -32,7 +33,7 @@ export default function AccountDetail() {
           {tab === 'holdings' && <ResourceSection type="holdings" filter={{ account_id: id }} />}
           {tab === 'lots' && <ResourceSection type="lots" filter={{ account_id: id }} description="Lot provenance is preserved; custodian statements take precedence in basis disputes." />}
           {tab === 'beneficiaries' && <ResourceSection type="beneficiary_designations" filter={{ subject_type: 'account', subject_id: id }} />}
-          {tab === 'ownership' && <ResourceSection type="ownership_interests" filter={{ subject_type: 'account', subject_id: id }} />}
+          {tab === 'ownership' && <TitlePanel type="account" id={id} />}
           {tab === 'performance' && (
             <Card title="Performance (trailing 12 months)">
               <Query q={perf}>

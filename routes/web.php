@@ -116,6 +116,10 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::post('/properties/{property}/public-records', [PropertyController::class, 'applyPublicRecords']);
         Route::get('/collateral/{type}/{id}', [PropertyController::class, 'financing'])->where(['type' => 'property|asset', 'id' => $ulid]);
         Route::post('/valuations/{valuation}/decision', [PropertyController::class, 'decideValuation']);
+        Route::post('/property-tax-installments/{installment}/pay', [PropertyController::class, 'payTaxInstallment'])->where('installment', $ulid);
+        Route::post('/properties/{property}/tax-installments', [PropertyController::class, 'projectTaxes'])->where('property', $ulid);
+        Route::get('/title/{type}/{id}', [PropertyController::class, 'title'])->where(['type' => 'property|asset|account|liability', 'id' => $ulid]);
+        Route::put('/title/{type}/{id}', [PropertyController::class, 'setTitle'])->where(['type' => 'property|asset|account|liability', 'id' => $ulid]);
 
         // Vault, extraction, payroll, imports
         Route::post('/vault/documents', [VaultController::class, 'upload']);

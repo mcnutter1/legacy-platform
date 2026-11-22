@@ -7,6 +7,7 @@ import { date, humanize, money } from '../lib/format';
 import { useWsQuery } from '../api/hooks';
 import type { TaxRun } from '../api/types';
 import { FinancingPanel, PublicRecordsPanel } from '../components/property';
+import { PropertyTaxesPanel, TitlePanel } from '../components/title';
 
 interface RentalEntry { property_id: string; name: string; classification: { category: string; activity: string; passive: boolean; fair_rental_days: number; personal_days: number; residence_threshold: number; average_stay_days: string | null; reasons: string[]; authorities: { cite: string; url: string }[] }; schedule_e: Record<string, string>; allowed?: string; suspended?: string }
 
@@ -30,8 +31,10 @@ export default function PropertyDetail() {
             <KeyValue items={[['Acquired', date(p.acquired_on as string)], ['Purchase price', money(p.purchase_price as string)], ['Land / building', `${money(p.land_value as string)} / ${money(p.building_value as string)}`],
               ['Placed in service', date(p.placed_in_service_on as string)], ['Recovery period', p.recovery_years ? `${p.recovery_years} years` : '—'], ['Status', humanize(String(p.status))]]} />
           </Card>
-          <Tabs value={tab} onChange={setTab} tabs={[{ id: 'records', label: 'Public records' }, { id: 'financing', label: 'Loans & equity' }, { id: 'stays', label: 'Stays & bookings' }, { id: 'use', label: 'Use & participation' }, { id: 'expenses', label: 'Expenses' },
-            { id: 'improvements', label: 'Improvements' }, { id: 'valuations', label: 'Valuations' }, { id: 'tax', label: 'Rental tax treatment' }, { id: 'ownership', label: 'Title' }]} />
+          <Tabs value={tab} onChange={setTab} tabs={[{ id: 'records', label: 'Public records' }, { id: 'taxes', label: 'Property taxes' }, { id: 'ownership', label: 'Owners' },
+            { id: 'financing', label: 'Loans & equity' }, { id: 'stays', label: 'Stays & bookings' }, { id: 'use', label: 'Use & participation' }, { id: 'expenses', label: 'Expenses' },
+            { id: 'improvements', label: 'Improvements' }, { id: 'valuations', label: 'Valuations' }, { id: 'tax', label: 'Rental tax treatment' }]} />
+          {tab === 'taxes' && <PropertyTaxesPanel property={p} />}
           {tab === 'records' && <PublicRecordsPanel property={p} />}
           {tab === 'financing' && <FinancingPanel type="property" id={id} />}
           {tab === 'stays' && <ResourceSection type="property_stays" filter={{ property_id: id }} description="Guest stays count as fair-rental days; personal, family-free and donated stays count as personal days. Availability alone never counts." />}
@@ -39,7 +42,7 @@ export default function PropertyDetail() {
           {tab === 'expenses' && <ResourceSection type="property_expenses" filter={{ property_id: id }} description="Classify each expense as a repair (deductible) or an improvement (capitalized). Undetermined items block a calculated tax status." />}
           {tab === 'improvements' && <ResourceSection type="property_improvements" filter={{ property_id: id }} />}
           {tab === 'valuations' && <ResourceSection type="valuations" filter={{ subject_type: 'property', subject_id: id }} />}
-          {tab === 'ownership' && <ResourceSection type="ownership_interests" filter={{ subject_type: 'property', subject_id: id }} />}
+          {tab === 'ownership' && <TitlePanel type="property" id={id} />}
           {tab === 'tax' && (
             <Query q={run} empty={<Notice>Run a tax calculation to see this property's classification.</Notice>}>
               {(r) => {

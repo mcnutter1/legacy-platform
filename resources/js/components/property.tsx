@@ -7,6 +7,7 @@ import { useWorkspace } from '../app/workspace';
 import { Card, Dialog, FormError, KeyValue, Money, Notice, Query, Stat, StatusBadge } from './ui';
 import { ResourceForm, useMetaFor, useScopes } from './resource';
 import { date, humanize, money, pct } from '../lib/format';
+import { RecordedDocumentsPanel } from './title';
 
 export interface Parcel {
   pin: string; mun_code: string | null; municipality: string | null; county: string | null; block: string | null; lot: string | null; qualifier: string | null;
@@ -297,6 +298,7 @@ export function PublicRecordsPanel({ property }: { property: AnyRecord }) {
         <p className="mt-3 text-xs text-muted">County clerk systems (deeds, mortgages, liens) have no public API: open the clerk search and use the block/lot or deed book/page above, then upload copies to the Vault.</p>
       </Card>
       {open && <RefreshRecordsDialog property={p} onClose={() => setOpen(false)} />}
+      <RecordedDocumentsPanel property={p} clerkLinks={links.filter((l) => l.kind === 'clerk')} />
     </div>
   );
 }

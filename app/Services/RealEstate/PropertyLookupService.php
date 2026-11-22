@@ -143,6 +143,7 @@ final class PropertyLookupService
                         'Automated valuation model; review before accepting into net worth.');
                 }
             }
+            $taxes = $parcel ? (new PropertyTaxService($this->ctx))->recordFromParcel($property, $parcel) : null;
             DB::table('property_lookups')->insert([
                 'id' => (string) Str::ulid(), 'workspace_id' => $property->workspace_id, 'scope_id' => $property->scope_id, 'property_id' => $property->id,
                 'query' => mb_substr($res['query'], 0, 255), 'sources' => json_encode($res['sources']),
@@ -152,10 +153,10 @@ final class PropertyLookupService
             Audit::log('property.public_records_applied', 'property', $property->id, ['pin' => $pin, 'fields' => array_keys($updates), 'valuations' => count(array_filter($created))],
                 scopeId: $property->scope_id);
 
-            return array_values(array_filter($created));
+            return ['valuations' => array_values(array_filter($created)), 'taxes' => $taxes];
         });
 
-        return ['updated_fields' => array_keys($updates), 'valuations' => $created];
+        return ['updated_fields' => array_keys($updates), 'valuations' => $created['valuations'], 'taxes' => $created['taxes']];
     }
 
     private function valuation(Record $p, string $purpose, string $value, ?string $low, ?string $high, string $method, string $source, string $status, string $rationale): ?string
@@ -418,12 +419,36 @@ final class PropertyLookupService
                 .(! empty($parcel['mun_code']) ? '&district='.rawurlencode($parcel['mun_code']) : '')];
         }
         if ($county === 'MONMOUTH') {
+            if (! empty($parcel['mun_code']) && ! empty($parcel['block']) && ! empty($parcel['lot']) && ($key = self::monmouthCardKey($parcel['mun_code'], $parcel['block'], $parcel['lot'], $parcel['qualifier'] ?? null))) {
+                $links[] = ['kind' => 'tax', 'label' => 'Property record card & tax list history', 'url' => 'https://tax1.co.monmouth.nj.us/cgi-bin/m4.cgi?district='.rawurlencode($parcel['mun_code']).'&l02='.$key];
+            }
             $links[] = ['kind' => 'clerk', 'label' => 'Monmouth County Clerk OPRS (deeds & mortgages)', 'url' => 'https://oprs.co.monmouth.nj.us/oprs/'];
         } elseif ($county === 'OCEAN') {
+            $links[] = ['kind' => 'tax', 'label' => 'Ocean County Board of Taxation tax list search', 'url' => 'https://tax.co.ocean.nj.us/frmTaxBoardTaxListSearch'];
             $links[] = ['kind' => 'clerk', 'label' => 'Ocean County Clerk public records search (deeds & mortgages)', 'url' => 'http://sng.co.ocean.nj.us/searchapplication/'];
         }
 
         return $links;
+    }
+
+    /** Record-card key used by the county tax board site: district, 5-digit block/lot with right-aligned suffixes, 5-char qualifier. */
+    public static function monmouthCardKey(string $mun, string $block, string $lot, ?string $qual): ?string
+    {
+        $part = function (string $v): ?string {
+            if (! preg_match('/^(\d{1,5})(?:\.(\d{1,4}))?$/', trim($v), $m)) {
+                return null;
+            }
+
+            return str_pad($m[1], 5, '0', STR_PAD_LEFT).str_pad($m[2] ?? '', 4, '_', STR_PAD_LEFT);
+        };
+        $b = $part($block);
+        $l = $part($lot);
+        $q = strtoupper(trim((string) $qual));
+        if (! preg_match('/^\d{4}$/', $mun) || ! $b || ! $l || ! preg_match('/^[A-Z0-9.\-]{0,5}$/', $q)) {
+            return null;
+        }
+
+        return $mun.$b.$l.str_pad($q, 5, '_').'M';
     }
 
     // ---------------- Helpers ----------------

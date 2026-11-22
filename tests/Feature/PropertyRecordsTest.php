@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AccessGrant;
+use App\Services\RealEstate\PropertyLookupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -133,6 +134,44 @@ class PropertyRecordsTest extends TestCase
         [$ws2, , $joint2] = $this->makeWorkspace($other);
         $this->signIn($other)->send('POST', $this->wsUrl($ws2, 'r/liabilities'), ['scope_id' => $joint2->id, 'name' => 'X', 'kind' => 'auto', 'current_balance' => '1',
             'collateral_type' => 'asset', 'collateral_id' => $boat])->assertStatus(422);
+    }
+
+    public function test_tax_records_installments_deed_reference_and_payment_posts_an_expense(): void
+    {
+        $this->fakeSources();
+        $u = $this->makeUser('owner');
+        [$ws, , $joint] = $this->makeWorkspace($u);
+        $id = $this->signIn($u)->send('POST', $this->wsUrl($ws, 'r/properties'), ['scope_id' => $joint->id, 'name' => 'Shore house', 'kind' => 'second_home'])->json('data.id');
+        $res = $this->signIn($u)->send('POST', $this->wsUrl($ws, "properties/{$id}/public-records"), ['address' => '12 Ocean Avenue, Example Beach NJ', 'pin' => '1599_7_2'])
+            ->assertOk()->json('data.taxes');
+        $y = (int) now()->format('Y');
+        $this->assertSame([[$y, $y - 1], 4, 1], [$res['years'], $res['installments'], $res['instruments']]);
+        $years = DB::table('property_tax_years')->where('property_id', $id)->orderBy('tax_year')->get();
+        $this->assertEquals([9876.54, 750000], [(float) $years[0]->tax_amount, (float) $years[1]->assessed_total]);
+        $inst = DB::table('property_tax_installments')->where('property_id', $id)->orderBy('quarter')->get();
+        $this->assertSame(["{$y}-02-01", "{$y}-11-01"], [$inst[0]->due_on, $inst[3]->due_on]);
+        $this->assertSame('9876.5400', number_format(array_sum(array_map(fn ($r) => (float) $r->amount, $inst->all())), 4, '.', ''));
+        $deed = DB::table('recorded_instruments')->where('property_id', $id)->first();
+        $this->assertSame(['deed', '12345', '678', 'mod_iv'], [$deed->kind, $deed->book, $deed->page, $deed->source]);
+
+        // Re-applying does not duplicate anything.
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "properties/{$id}/public-records"), ['address' => '12 Ocean Avenue, Example Beach NJ', 'pin' => '1599_7_2'])->assertOk();
+        $this->assertSame([2, 4, 1], [DB::table('property_tax_years')->count(), DB::table('property_tax_installments')->count(), DB::table('recorded_instruments')->count()]);
+
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "property-tax-installments/{$inst[0]->id}/pay"), ['paid_on' => "{$y}-01-28", 'amount' => '2469.14'])->assertOk();
+        $exp = DB::table('property_expenses')->where('property_id', $id)->first();
+        $this->assertSame(['property_tax', 'expense', 'tax_installment'], [$exp->category, $exp->treatment, $exp->source]);
+        $this->assertEquals(2469.14, (float) $exp->amount);
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "property-tax-installments/{$inst[0]->id}/pay"), ['paid_on' => "{$y}-01-28", 'amount' => '1'])->assertStatus(409);
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "property-tax-installments/{$inst[1]->id}/pay"), ['paid_on' => '2999-01-01', 'amount' => '1'])->assertStatus(422);
+    }
+
+    public function test_monmouth_record_card_key(): void
+    {
+        $this->assertSame('131600040____00016_________M', PropertyLookupService::monmouthCardKey('1316', '40', '16', null));
+        $this->assertSame('131600040____00007__01_____M', PropertyLookupService::monmouthCardKey('1316', '40', '7.01', ''));
+        $this->assertSame('131600049____00013__02C0001M', PropertyLookupService::monmouthCardKey('1316', '49', '13.02', 'c0001'));
+        $this->assertNull(PropertyLookupService::monmouthCardKey('1316', "40' OR 1", '1', null));
     }
 
     public function test_financing_hides_loans_without_debt_access(): void

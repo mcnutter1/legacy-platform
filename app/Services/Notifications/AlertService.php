@@ -65,6 +65,10 @@ final class AlertService
                     $send('real_estate', $p->scope_id, 'stale_valuation', 'A property valuation is more than a year old', '/real-estate', "val:{$p->id}:".now()->format('Y-m'), null, 'low');
                 }
             }
+            // NJ property tax quarters (10-day grace period before interest).
+            foreach (DB::table('property_tax_installments')->where('workspace_id', $ws->id)->whereIn('status', ['projected', 'billed'])->whereBetween('due_on', [$today, $soon(14)])->whereNull('archived_at')->get() as $i) {
+                $send('real_estate', $i->scope_id, 'property_tax_due', "Property tax Q{$i->quarter} {$i->tax_year} due {$i->due_on}", "/real-estate/{$i->property_id}", "ptax:{$i->id}", $i->due_on, 'high');
+            }
             $stats[$ws->id] = $count;
         }
         // Expire break-glass grants.

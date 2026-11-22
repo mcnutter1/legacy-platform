@@ -4,6 +4,7 @@ import { useResource } from '../api/hooks';
 import { ResourceForm, ResourceSection, useMetaFor } from '../components/resource';
 import { Card, Dialog, KeyValue, PageHeader, Query, Tabs } from '../components/ui';
 import { FinancingPanel } from '../components/property';
+import { TitlePanel } from '../components/title';
 import { date, humanize, money } from '../lib/format';
 
 export default function AssetDetail() {
@@ -24,10 +25,10 @@ export default function AssetDetail() {
               ['Model year', String(a.model_year ?? '—')], ['Registration', a.registration_state ? `${a.registration_state}${a.registration_expires_on ? ` · expires ${date(a.registration_expires_on as string)}` : ''}` : '—'],
               ['Status', humanize(String(a.status ?? '—'))]]} />
           </Card>
-          <Tabs value={tab} onChange={setTab} tabs={[{ id: 'financing', label: 'Loans & equity' }, { id: 'valuations', label: 'Valuations' }, { id: 'ownership', label: 'Title' }]} />
+          <Tabs value={tab} onChange={setTab} tabs={[{ id: 'financing', label: 'Loans & equity' }, { id: 'valuations', label: 'Valuations' }, { id: 'ownership', label: 'Owners' }]} />
           {tab === 'financing' && <FinancingPanel type="asset" id={id} />}
           {tab === 'valuations' && <ResourceSection type="valuations" filter={{ subject_type: 'asset', subject_id: id }} defaults={{ subject_type: 'asset', subject_id: id }} hidden={['subject_type', 'subject_id']} />}
-          {tab === 'ownership' && <ResourceSection type="ownership_interests" filter={{ subject_type: 'asset', subject_id: id }} defaults={{ subject_type: 'asset', subject_id: id }} hidden={['subject_type', 'subject_id']} />}
+          {tab === 'ownership' && <TitlePanel type="asset" id={id} />}
           <Dialog open={edit} onClose={() => setEdit(false)} title="Edit asset" wide>
             {meta && <ResourceForm meta={meta} record={a} onSaved={() => setEdit(false)} onCancel={() => setEdit(false)} />}
           </Dialog>

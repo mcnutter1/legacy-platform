@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — property tax records, recorded documents, joint title
+
+### Implemented
+- Property taxes: assessment and levy history per year from the NJ tax list (MOD-IV), NJ quarterly installments
+  (projected from last year until the bill is entered), "Record payment" posts a `property_tax` expense used by the tax
+  engine, due-date alerts. Deep link to the Monmouth property record card (tax list history) and the Ocean tax board.
+- Recorded documents per property (deed, mortgage, satisfaction, lien, easement…) with book/page/instrument number,
+  optional link to the secured loan, and "Attach PDF" into the Vault. The deed reference is pre-filled from the tax list.
+- Owners editor for properties, assets, accounts and debts: sole, joint tenancy with survivorship, tenancy by the
+  entirety (spouses, real property only), tenants in common (any shares), community, trust, entity. Effective-dated;
+  prior title is end-dated, not deleted.
+
+### Not implemented (by design)
+- Automatic download from the county clerk systems: Ocean County's search is a Windows ClickOnce application with a
+  proprietary service and click-through terms, Monmouth OPRS did not respond to automated requests, and the county
+  tax-board site disallows automated access (robots.txt). Users download images there and attach them.
+
 ## Unreleased — live Monarch and Snowball integrations
 
 ### Implemented

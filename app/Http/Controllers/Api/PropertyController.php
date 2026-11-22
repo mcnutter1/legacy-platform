@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Resources\ResourceService;
 use App\Services\NetWorthService;
 use App\Services\RealEstate\PropertyLookupService;
+use App\Services\RealEstate\PropertyTaxService;
+use App\Services\TitleService;
 use App\Support\ApiError;
 use App\Support\Audit;
 use App\Support\Dec;
@@ -73,6 +75,41 @@ class PropertyController extends ApiController
             'equity' => $value !== null ? Dec::sub($value, $debt) : null,
             'loan_to_value' => $value !== null && Dec::cmp($value, '0') > 0 ? Dec::div($debt, $value, 4) : null,
         ]);
+    }
+
+    public function payTaxInstallment(Request $r, string $installment): JsonResponse
+    {
+        $d = $this->validated($r, ['paid_on' => 'required|date_format:Y-m-d', 'amount' => 'required|string|max:24']);
+
+        return $this->ok((new PropertyTaxService($this->ctx()))->pay($installment, $d['paid_on'], $d['amount']));
+    }
+
+    /** Project NJ quarterly installments for a year from the prior year's levy on file. */
+    public function projectTaxes(Request $r, string $property): JsonResponse
+    {
+        $row = (new ResourceService($this->ctx()))->find('properties', $property, 'write');
+        $year = (int) $r->input('tax_year', now()->format('Y'));
+        if ($year < 2000 || $year > (int) now()->format('Y') + 1) {
+            throw new ApiError('validation_failed', 'Choose a tax year from 2000 to next year.', 422);
+        }
+        $prior = DB::table('property_tax_years')->where('property_id', $row->id)->where('tax_year', $year - 1)->whereNull('archived_at')->value('tax_amount')
+            ?? ($year - 1 === (int) now()->format('Y') - 1 ? $row->annual_property_tax : null);
+        if ($prior === null || Dec::cmp(Dec::norm($prior), '0') <= 0) {
+            throw ApiError::unsupported('Enter the '.($year - 1).' tax amount (Assessments & property tax) before projecting installments.');
+        }
+        $n = DB::transaction(fn () => (new PropertyTaxService($this->ctx()))->projectInstallments($row, $year, Dec::norm($prior)));
+
+        return $this->ok(['created' => $n, 'tax_year' => $year]);
+    }
+
+    public function title(string $type, string $id): JsonResponse
+    {
+        return $this->ok((new TitleService($this->ctx()))->current($type, $id));
+    }
+
+    public function setTitle(Request $r, string $type, string $id): JsonResponse
+    {
+        return $this->ok((new TitleService($this->ctx()))->set($type, $id, $r->only(['title_form', 'effective_from', 'owners', 'evidence_document_id'])));
     }
 
     public function decideValuation(Request $r, string $valuation): JsonResponse

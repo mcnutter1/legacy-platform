@@ -2924,6 +2924,80 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/properties/{property}/tax-installments": {
+            "post": {
+                "operationId": "post_workspaces_workspace_properties_property_tax_installments",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "property",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/property-tax-installments/{installment}/pay": {
+            "post": {
+                "operationId": "post_workspaces_workspace_property_tax_installments_installment_pay",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "installment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/r/{type}": {
             "get": {
                 "operationId": "get_workspaces_workspace_r_type",
@@ -3761,6 +3835,91 @@
                     },
                     {
                         "name": "unit",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/title/{type}/{id}": {
+            "get": {
+                "operationId": "get_workspaces_workspace_title_type_id",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            },
+            "put": {
+                "operationId": "put_workspaces_workspace_title_type_id",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -8627,6 +8786,241 @@
                 },
                 "required": [],
                 "description": "Public record lookups (real_estate)"
+            },
+            "PropertyTaxYears": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "scope_id": {
+                        "type": "string"
+                    },
+                    "edit_version": {
+                        "type": "integer"
+                    },
+                    "_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "property_id": {
+                        "type": "string",
+                        "description": "ULID"
+                    },
+                    "tax_year": {
+                        "type": "integer"
+                    },
+                    "assessed_land": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "assessed_improvement": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "assessed_total": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "exemptions": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "tax_amount": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "property_class": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "as_of": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "notes": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "property_id",
+                    "tax_year"
+                ],
+                "description": "Assessments & property tax (real_estate)"
+            },
+            "PropertyTaxInstallments": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "scope_id": {
+                        "type": "string"
+                    },
+                    "edit_version": {
+                        "type": "integer"
+                    },
+                    "_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "property_id": {
+                        "type": "string",
+                        "description": "ULID"
+                    },
+                    "tax_year": {
+                        "type": "integer"
+                    },
+                    "quarter": {
+                        "type": "integer"
+                    },
+                    "due_on": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "amount": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "projected",
+                            "billed",
+                            "paid",
+                            "appealed",
+                            "waived"
+                        ]
+                    },
+                    "paid_on": {
+                        "type": "string",
+                        "format": "date",
+                        "readOnly": true
+                    },
+                    "paid_amount": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)",
+                        "readOnly": true
+                    },
+                    "expense_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "source": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "notes": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "property_id",
+                    "tax_year",
+                    "quarter",
+                    "due_on"
+                ],
+                "description": "Property tax installments (real_estate)"
+            },
+            "RecordedInstruments": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "scope_id": {
+                        "type": "string"
+                    },
+                    "edit_version": {
+                        "type": "integer"
+                    },
+                    "_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "property_id": {
+                        "type": "string",
+                        "description": "ULID"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "deed",
+                            "mortgage",
+                            "mortgage_satisfaction",
+                            "assignment",
+                            "lien",
+                            "lien_release",
+                            "easement",
+                            "lis_pendens",
+                            "survey",
+                            "other"
+                        ]
+                    },
+                    "recorded_on": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "book": {
+                        "type": "string"
+                    },
+                    "page": {
+                        "type": "string"
+                    },
+                    "instrument_number": {
+                        "type": "string"
+                    },
+                    "grantor": {
+                        "type": "string"
+                    },
+                    "grantee": {
+                        "type": "string"
+                    },
+                    "consideration": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "county": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "document_id": {
+                        "type": "string",
+                        "description": "ULID"
+                    },
+                    "liability_id": {
+                        "type": "string",
+                        "description": "ULID"
+                    },
+                    "notes": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "property_id",
+                    "kind"
+                ],
+                "description": "Recorded documents (real_estate)"
             },
             "PropertyStays": {
                 "type": "object",
@@ -18009,6 +18403,452 @@
                     "type": "s",
                     "required": false,
                     "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                }
+            ]
+        },
+        "property_tax_years": {
+            "type": "property_tax_years",
+            "label": "Assessments & property tax",
+            "domain": "real_estate",
+            "title": null,
+            "list": [
+                "tax_year",
+                "assessed_land",
+                "assessed_improvement",
+                "assessed_total",
+                "tax_amount",
+                "source"
+            ],
+            "readonly": false,
+            "creatable": true,
+            "parent": "property_id",
+            "unscoped": false,
+            "searchable": false,
+            "date": null,
+            "fields": [
+                {
+                    "name": "property_id",
+                    "type": "ref",
+                    "required": true,
+                    "readonly": false,
+                    "values": null,
+                    "ref": "properties",
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "tax_year",
+                    "type": "y",
+                    "required": true,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "assessed_land",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "assessed_improvement",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "assessed_total",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "exemptions",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "tax_amount",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "property_class",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "source",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "as_of",
+                    "type": "d",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "notes",
+                    "type": "t",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                }
+            ]
+        },
+        "property_tax_installments": {
+            "type": "property_tax_installments",
+            "label": "Property tax installments",
+            "domain": "real_estate",
+            "title": null,
+            "list": [
+                "tax_year",
+                "quarter",
+                "due_on",
+                "amount",
+                "status",
+                "paid_on",
+                "paid_amount"
+            ],
+            "readonly": false,
+            "creatable": true,
+            "parent": "property_id",
+            "unscoped": false,
+            "searchable": false,
+            "date": "due_on",
+            "fields": [
+                {
+                    "name": "property_id",
+                    "type": "ref",
+                    "required": true,
+                    "readonly": false,
+                    "values": null,
+                    "ref": "properties",
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "tax_year",
+                    "type": "y",
+                    "required": true,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "quarter",
+                    "type": "i",
+                    "required": true,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "due_on",
+                    "type": "d",
+                    "required": true,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "amount",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "status",
+                    "type": "enum",
+                    "required": false,
+                    "readonly": false,
+                    "values": [
+                        "projected",
+                        "billed",
+                        "paid",
+                        "appealed",
+                        "waived"
+                    ],
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "paid_on",
+                    "type": "d",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "paid_amount",
+                    "type": "m",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "expense_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "source",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "notes",
+                    "type": "t",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                }
+            ]
+        },
+        "recorded_instruments": {
+            "type": "recorded_instruments",
+            "label": "Recorded documents",
+            "domain": "real_estate",
+            "title": null,
+            "list": [
+                "kind",
+                "recorded_on",
+                "book",
+                "page",
+                "instrument_number",
+                "consideration",
+                "document_id",
+                "source"
+            ],
+            "readonly": false,
+            "creatable": true,
+            "parent": "property_id",
+            "unscoped": false,
+            "searchable": false,
+            "date": null,
+            "fields": [
+                {
+                    "name": "property_id",
+                    "type": "ref",
+                    "required": true,
+                    "readonly": false,
+                    "values": null,
+                    "ref": "properties",
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "kind",
+                    "type": "enum",
+                    "required": true,
+                    "readonly": false,
+                    "values": [
+                        "deed",
+                        "mortgage",
+                        "mortgage_satisfaction",
+                        "assignment",
+                        "lien",
+                        "lien_release",
+                        "easement",
+                        "lis_pendens",
+                        "survey",
+                        "other"
+                    ],
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "recorded_on",
+                    "type": "d",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "book",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "page",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "instrument_number",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "grantor",
+                    "type": "t",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": "identity"
+                },
+                {
+                    "name": "grantee",
+                    "type": "t",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": "identity"
+                },
+                {
+                    "name": "consideration",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "county",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "source",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "document_id",
+                    "type": "ref",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": "documents",
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "liability_id",
+                    "type": "ref",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": "liabilities",
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "notes",
+                    "type": "t",
+                    "required": false,
+                    "readonly": false,
                     "values": null,
                     "ref": null,
                     "poly_type_field": null,

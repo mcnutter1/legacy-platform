@@ -51,6 +51,17 @@ labeled **estimate**. Editing a pack changes its hash and requires re-approval.
 | `estimated_tax` | N.J.S.A. 54A:9-6; NJ-1040-ES (80% / 100% safe harbor) |
 | `inheritance` | N.J.S.A. 54:34 (Class A exempt; Class C/D rates) — used by the estate model |
 
+## Property tax records (inputs, not engine rules)
+
+| Item | Source |
+| --- | --- |
+| Assessed land/improvements/total, property class, prior-year levy (`LAST_YR_TX`), deed book/page/date, sale price | NJ MOD-IV tax list via NJOGIS statewide parcels (public ArcGIS service); refreshed on lookup |
+| Quarterly due dates Feb 1 / May 1 / Aug 1 / Nov 1, 10-day grace | N.J.S.A. 54:4-66, 54:4-67 |
+| Projected installments = prior-year levy ÷ 4 (status `projected`, source `estimate`) | NJ preliminary bills are half the prior year (N.J.S.A. 54:4-66); final bills differ — replace with bill amounts |
+
+Only **paid** installments become `property_expenses` (category `property_tax`), which is what the engine reads for
+Schedule A real-estate tax, the NJ property-tax deduction/credit and Schedule E. Projections never reach a return.
+
 ## Explicitly unsupported (runs return `unsupported`, never a guess)
 
 Part-year / nonresident NJ (NJ-1040NR), multi-state credit beyond NJ resident credit inputs, foreign earned income

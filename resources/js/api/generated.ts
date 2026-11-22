@@ -1187,6 +1187,75 @@ export interface PropertyLookups {
   selected_pin?: string | null;
 }
 
+export interface PropertyTaxYears {
+  id: Ulid;
+  type: 'property_tax_years';
+  scope_id?: Ulid;
+  edit_version: number;
+  _title: string | null;
+  _redacted?: string[];
+  created_at: string | null;
+  updated_at: string | null;
+  property_id: Ulid;
+  tax_year: number;
+  assessed_land?: Decimal | null;
+  assessed_improvement?: Decimal | null;
+  assessed_total?: Decimal | null;
+  exemptions?: Decimal | null;
+  tax_amount?: Decimal | null;
+  property_class?: string | null;
+  source?: string | null;
+  as_of?: ISODate | null;
+  notes?: string | null;
+}
+
+export interface PropertyTaxInstallments {
+  id: Ulid;
+  type: 'property_tax_installments';
+  scope_id?: Ulid;
+  edit_version: number;
+  _title: string | null;
+  _redacted?: string[];
+  created_at: string | null;
+  updated_at: string | null;
+  property_id: Ulid;
+  tax_year: number;
+  quarter: number;
+  due_on: ISODate;
+  amount?: Decimal | null;
+  status?: 'projected' | 'billed' | 'paid' | 'appealed' | 'waived' | null;
+  paid_on?: ISODate | null;
+  paid_amount?: Decimal | null;
+  expense_id?: string | null;
+  source?: string | null;
+  notes?: string | null;
+}
+
+export interface RecordedInstruments {
+  id: Ulid;
+  type: 'recorded_instruments';
+  scope_id?: Ulid;
+  edit_version: number;
+  _title: string | null;
+  _redacted?: string[];
+  created_at: string | null;
+  updated_at: string | null;
+  property_id: Ulid;
+  kind: 'deed' | 'mortgage' | 'mortgage_satisfaction' | 'assignment' | 'lien' | 'lien_release' | 'easement' | 'lis_pendens' | 'survey' | 'other';
+  recorded_on?: ISODate | null;
+  book?: string | null;
+  page?: string | null;
+  instrument_number?: string | null;
+  grantor?: string | null;
+  grantee?: string | null;
+  consideration?: Decimal | null;
+  county?: string | null;
+  source?: string | null;
+  document_id?: Ulid | null;
+  liability_id?: Ulid | null;
+  notes?: string | null;
+}
+
 export interface PropertyStays {
   id: Ulid;
   type: 'property_stays';
@@ -1655,6 +1724,9 @@ export interface ResourceTypes {
   tax_strategies: TaxStrategies;
   properties: Properties;
   property_lookups: PropertyLookups;
+  property_tax_years: PropertyTaxYears;
+  property_tax_installments: PropertyTaxInstallments;
+  recorded_instruments: RecordedInstruments;
   property_stays: PropertyStays;
   property_use_logs: PropertyUseLogs;
   property_improvements: PropertyImprovements;

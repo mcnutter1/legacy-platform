@@ -20,6 +20,8 @@ class IntegrationsTest extends TestCase
 
     private array $monarch = [];
 
+    private bool $monarchWebApproved = true;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -66,6 +68,10 @@ class IntegrationsTest extends TestCase
                 'revocation_endpoint' => 'https://api.monarch.com/oauth/revoke/', 'code_challenge_methods_supported' => ['S256']]);
         }
         if ($url === 'https://api.monarch.com/oauth/register') {
+            if (! $this->monarchWebApproved && ! str_starts_with($r->data()['redirect_uris'][0] ?? '', 'http://127.0.0.1')) {
+                return Http::response(['error' => 'invalid_redirect_uri', 'error_description' => "Redirect URI is not supported. This redirect URL isn't on Monarch's approved list yet."], 400);
+            }
+
             return Http::response(['client_id' => 'client-123'], 201);
         }
         if ($url === 'https://api.monarch.com/oauth/token/') {
@@ -282,6 +288,21 @@ class IntegrationsTest extends TestCase
         $this->signIn($u)->send('POST', $this->wsUrl($ws, "integrations/{$mon}/sync"))->assertStatus(202);
         $this->work();
         $this->assertSame(2, DB::table('accounts')->whereNull('archived_at')->count());
+    }
+
+    public function test_monarch_falls_back_to_loopback_redirect_when_web_callback_is_not_approved(): void
+    {
+        $this->monarchWebApproved = false;
+        $u = $this->makeUser('owner');
+        [$ws, , $joint] = $this->makeWorkspace($u);
+        $id = $this->signIn($u)->send('POST', $this->wsUrl($ws, 'integrations'), ['provider' => 'monarch', 'scope_id' => $joint->id])->json('data.id');
+        $start = $this->send('POST', $this->wsUrl($ws, "integrations/{$id}/oauth/start"))->assertOk()->json('data');
+        $this->assertSame(['loopback', 'http://127.0.0.1:33418/callback'], [$start['mode'], $start['redirect_uri']]);
+        $this->assertStringContainsString('approved list', (string) $start['notice']);
+        parse_str((string) parse_url($start['authorize_url'], PHP_URL_QUERY), $q);
+        $this->assertSame('http://127.0.0.1:33418/callback', $q['redirect_uri']);
+        $this->send('POST', $this->wsUrl($ws, "integrations/{$id}/oauth/complete"), ['code' => 'good-code', 'state' => $q['state']])->assertOk()->assertJsonPath('data.authorized', true);
+        Http::assertSent(fn (Request $r) => $r->url() === 'https://api.monarch.com/oauth/token/' && ($r->data()['redirect_uri'] ?? null) === 'http://127.0.0.1:33418/callback');
     }
 
     public function test_guards_hosts_step_up_and_access(): void

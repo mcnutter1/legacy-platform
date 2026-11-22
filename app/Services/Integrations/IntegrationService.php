@@ -21,6 +21,8 @@ final class IntegrationService
 {
     public const PROVIDERS = ['monarch' => MonarchProvider::class, 'snowball' => SnowballProvider::class];
 
+    public const LOOPBACK_REDIRECT = 'http://127.0.0.1:33418/callback';
+
     public function __construct(private readonly AccessContext $ctx) {}
 
     public static function provider(string $key): Provider
@@ -112,8 +114,22 @@ final class IntegrationService
         }
         $meta = $this->discover($p, (string) $c->server_url);
         $client = json_decode((string) $c->oauth_client, true) ?: [];
-        if (empty($client['client_id']) || ($client['redirect_uri'] ?? null) !== self::redirectUri() || ($client['registration_endpoint'] ?? null) !== $meta['registration_endpoint']) {
-            $client = $this->register($p, $meta);
+        $reusable = ! empty($client['client_id']) && ($client['registration_endpoint'] ?? null) === $meta['registration_endpoint']
+            && in_array($client['redirect_uri'] ?? null, [self::redirectUri(), self::LOOPBACK_REDIRECT], true);
+        // A loopback client is re-checked daily in case the provider has since approved our web callback.
+        if ($reusable && $client['redirect_uri'] === self::LOOPBACK_REDIRECT && (int) ($client['web_checked_at'] ?? 0) < time() - 86400) {
+            $reusable = false;
+        }
+        if (! $reusable) {
+            try {
+                $client = $this->register($p, $meta, self::redirectUri());
+            } catch (ApiError $e) {
+                if ($e->errorCode !== 'invalid_redirect_uri') {
+                    throw $e;
+                }
+                // RFC 8252 loopback redirect: allowed by providers that gate web callbacks behind an approval list.
+                $client = $this->register($p, $meta, self::LOOPBACK_REDIRECT) + ['web_checked_at' => time(), 'web_error' => $e->getMessage()];
+            }
         }
         $client = $meta + $client;
         $verifier = Str::random(64);
@@ -123,12 +139,14 @@ final class IntegrationService
         ], now()->addMinutes(10));
         $this->update($c, ['oauth_client' => json_encode($client)]);
         $url = $meta['authorization_endpoint'].'?'.http_build_query([
-            'response_type' => 'code', 'client_id' => $client['client_id'], 'redirect_uri' => self::redirectUri(), 'scope' => 'mcp:read', 'state' => $state,
+            'response_type' => 'code', 'client_id' => $client['client_id'], 'redirect_uri' => $client['redirect_uri'], 'scope' => 'mcp:read', 'state' => $state,
             'code_challenge' => rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '='), 'code_challenge_method' => 'S256',
             'resource' => $c->server_url,
         ], '', '&', PHP_QUERY_RFC3986);
+        $loopback = $client['redirect_uri'] === self::LOOPBACK_REDIRECT;
 
-        return ['authorize_url' => $url];
+        return ['authorize_url' => $url, 'mode' => $loopback ? 'loopback' : 'web', 'redirect_uri' => $client['redirect_uri'],
+            'web_redirect' => self::redirectUri(), 'notice' => $loopback ? ($client['web_error'] ?? null) : null];
     }
 
     public function oauthComplete(string $id, string $code, string $state): object
@@ -140,7 +158,7 @@ final class IntegrationService
         }
         $client = json_decode((string) $c->oauth_client, true) ?: [];
         $tokens = self::tokenRequest(self::provider($c->provider), $client, [
-            'grant_type' => 'authorization_code', 'code' => mb_substr($code, 0, 2048), 'redirect_uri' => self::redirectUri(),
+            'grant_type' => 'authorization_code', 'code' => mb_substr($code, 0, 2048), 'redirect_uri' => $client['redirect_uri'] ?? self::redirectUri(),
             'client_id' => $client['client_id'] ?? '', 'code_verifier' => Crypt::decryptString($pending['verifier']), 'resource' => $c->server_url,
         ]);
         $this->storeTokens($c, $tokens);
@@ -355,11 +373,11 @@ final class IntegrationService
         return $out;
     }
 
-    private function register(Provider $p, array $meta): array
+    private function register(Provider $p, array $meta, string $redirect): array
     {
         try {
             $res = Http::timeout(15)->withOptions(['allow_redirects' => false])->asJson()->post($meta['registration_endpoint'], [
-                'client_name' => 'McNutt Legacy', 'redirect_uris' => [self::redirectUri()], 'grant_types' => ['authorization_code', 'refresh_token'],
+                'client_name' => 'McNutt Legacy', 'redirect_uris' => [$redirect], 'grant_types' => ['authorization_code', 'refresh_token'],
                 'response_types' => ['code'], 'token_endpoint_auth_method' => 'none', 'scope' => 'mcp:read',
                 'client_uri' => rtrim((string) config('app.url'), '/'),
             ]);
@@ -367,10 +385,12 @@ final class IntegrationService
             throw new ApiError('integration_unavailable', "{$p->label()} did not respond.", 502);
         }
         if (! $res->successful() || ! is_string($res->json('client_id'))) {
-            throw new ApiError('integration_unavailable', "{$p->label()} refused client registration.", 502);
+            $why = mb_substr((string) ($res->json('error_description') ?? $res->json('error') ?? 'HTTP '.$res->status()), 0, 300);
+
+            throw new ApiError($res->json('error') === 'invalid_redirect_uri' ? 'invalid_redirect_uri' : 'integration_unavailable', "{$p->label()} refused client registration: {$why}", 502);
         }
 
-        return ['client_id' => $res->json('client_id'), 'redirect_uri' => self::redirectUri(), 'registration_endpoint' => $meta['registration_endpoint']];
+        return ['client_id' => $res->json('client_id'), 'redirect_uri' => $redirect, 'registration_endpoint' => $meta['registration_endpoint']];
     }
 
     private static function tokenRequest(Provider $p, array $client, array $form): array

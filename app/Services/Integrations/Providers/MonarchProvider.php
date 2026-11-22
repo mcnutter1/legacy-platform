@@ -41,6 +41,7 @@ final class MonarchProvider extends Provider
             'steps' => [
                 'Make sure your Monarch plan includes the MCP connector (Core or Plus) and that you can sign in at app.monarch.com.',
                 'Here, click "Connect with Monarch". A Monarch window opens: sign in, review the data-provider disclosure, and leave only "Read" checked. Do not grant Write.',
+                'If Monarch has not yet approved this site\'s return address, the approval tab ends on a 127.0.0.1 page that will not load — copy that page\'s full address and paste it here to finish. To skip this step later, request approval of the return address in Monarch → Settings → MCP Connector.',
                 'You return here automatically. Click "Test" to list the tools Monarch exposes, then "Preview" to see the accounts, balances and holdings that would be imported.',
                 'Review how each Monarch account matches your existing accounts (linked, new, or possible duplicate), then click "Approve & enable sync".',
                 'To revoke later: in Monarch go to Settings → MCP Connector and remove "McNutt Legacy", or click "Disconnect" here (both stop access immediately).',

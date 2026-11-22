@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { api, ws } from '../api/client';
+import { api, ApiError, ws } from '../api/client';
 import { useCommand, useWsQuery } from '../api/hooks';
 import { useWorkspace } from '../app/workspace';
 import { useScopes } from '../components/resource';
@@ -123,6 +123,7 @@ function ConnectionBody({ c, provider }: { c: Connection; provider?: ProviderInf
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ server: { name: string | null; version: string | null }; tools: { name: string }[]; missing: string[] } | null>(null);
+  const [loopback, setLoopback] = useState<OAuthStart | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: [wsId] });
   const run = async (name: string, fn: () => Promise<unknown>) => {
     setBusy(name); setErr(null);
@@ -144,9 +145,11 @@ function ConnectionBody({ c, provider }: { c: Connection; provider?: ProviderInf
         ) : <p className="text-sm text-muted">Not authorized yet.</p>}
         {c.auth_kind === 'api_key' ? <KeyForm c={c} onSaved={refresh} />
           : <button className="btn-primary btn-sm" disabled={busy !== null} onClick={() => run('oauth', async () => {
-              const r = await post<{ authorize_url: string }>('oauth/start');
-              window.location.assign(r.authorize_url);
+              const r = await post<OAuthStart>('oauth/start');
+              if (r.mode === 'web') window.location.assign(r.authorize_url);
+              else setLoopback(r);
             })}>{c.authorized ? 'Reconnect with Monarch' : 'Connect with Monarch'}</button>}
+        {loopback && <LoopbackFinish c={c} start={loopback} onDone={() => { setLoopback(null); void refresh(); }} />}
         {provider && <InstructionsBlock p={provider} />}
       </section>
 
@@ -193,6 +196,48 @@ function ConnectionBody({ c, provider }: { c: Connection; provider?: ProviderInf
           <button className="btn-danger btn-sm" disabled={busy !== null} onClick={() => { if (confirm(`Disconnect ${c.label}? Credentials are deleted${c.auth_kind === 'oauth' ? ' and the token is revoked at Monarch' : ''}. Imported data stays.`)) void run('disconnect', () => post('disconnect')); }}>Disconnect</button>
         </div>
       )}
+    </div>
+  );
+}
+
+interface OAuthStart { authorize_url: string; mode: 'web' | 'loopback'; redirect_uri: string; web_redirect: string; notice: string | null }
+
+/** Provider hasn't approved our web callback yet: authorize in a new tab, then paste the 127.0.0.1 address it lands on. */
+function LoopbackFinish({ c, start, onDone }: { c: Connection; start: OAuthStart; onDone: () => void }) {
+  const { id: wsId } = useWorkspace();
+  const [pasted, setPasted] = useState('');
+  const [err, setErr] = useState<unknown>(null);
+  const [busy, setBusy] = useState(false);
+  const finish = async () => {
+    setErr(null);
+    let u: URL;
+    try { u = new URL(pasted.trim()); } catch { setErr(new Error('Paste the full address from the tab, starting with http://127.0.0.1')); return; }
+    const code = u.searchParams.get('code');
+    const state = u.searchParams.get('state');
+    if (u.searchParams.get('error')) { setErr(new Error(`Monarch returned: ${u.searchParams.get('error_description') ?? u.searchParams.get('error')}`)); return; }
+    if (!code || !state) { setErr(new Error('That address has no authorization code. Approve access in Monarch first, then copy the address of the page it opens.')); return; }
+    setBusy(true);
+    try { await api(ws(wsId, `integrations/${c.id}/oauth/complete`), { body: { code, state } }); onDone(); } catch (x) { setErr(x); } finally { setBusy(false); }
+  };
+  return (
+    <div className="space-y-3 rounded-lg border border-line p-4 text-sm">
+      <Notice tone="info">Monarch has not approved this site’s return address yet, so authorization finishes with a copy-and-paste step (the standard approach for apps without an approved callback).</Notice>
+      <ol className="list-decimal space-y-1.5 pl-5">
+        <li><a className="btn-primary btn-sm" href={start.authorize_url} target="_blank" rel="noreferrer noopener">Open Monarch to approve ↗</a> — sign in and leave only <strong>Read</strong> checked.</li>
+        <li>After you approve, that tab opens a page at <code>127.0.0.1</code> that will not load (“site can’t be reached”). That is expected.</li>
+        <li>Copy the full address from that tab’s address bar and paste it here (it expires in 10 minutes).</li>
+      </ol>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="field min-w-72 flex-1"><span>Address from the Monarch tab</span>
+          <input value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="http://127.0.0.1:33418/callback?code=…&state=…" spellCheck={false} autoComplete="off" /></label>
+        <button className="btn-primary" disabled={busy || !pasted.trim()} onClick={() => void finish()}>Finish connecting</button>
+      </div>
+      <FormError error={err instanceof ApiError ? err : null} />
+      {err && !(err instanceof ApiError) ? <p className="text-sm text-negative" role="alert">{(err as Error).message}</p> : null}
+      <details className="text-xs text-muted"><summary className="cursor-pointer">Skip this step in future</summary>
+        <p className="mt-1">Request approval of <code>{start.web_redirect}</code> in Monarch under <a className="link" href="https://app.monarch.com/settings/integrations" target="_blank" rel="noreferrer noopener">Settings → MCP Connector</a>. Once approved, Connect returns here automatically.</p>
+        {start.notice && <p className="mt-1">Monarch said: {start.notice}</p>}
+      </details>
     </div>
   );
 }

@@ -27,10 +27,12 @@ function Item({ item }: { item: AnyRecord }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={SEVERITY[String(item.severity)] ?? 'draft'} label={humanize(String(item.severity))} />
-          {target && <Link className="btn-secondary btn-sm" to={path(target)}>Open</Link>}
+          {target && item.kind === 'extraction_review' && item.status === 'open'
+            ? <Link className="btn-primary btn-sm" to={path(target)}>Review &amp; approve</Link>
+            : target && <Link className="btn-secondary btn-sm" to={path(target)}>Open</Link>}
           {item.status === 'open' && <>
-            <button className="btn-primary btn-sm" disabled={resolve.isPending} onClick={() => resolve.mutate({ status: 'resolved' })}>{item.kind === 'carryforward_proposal' ? 'Confirm' : 'Resolve'}</button>
-            <button className="btn-ghost btn-sm" disabled={resolve.isPending} onClick={() => resolve.mutate({ status: 'dismissed', note: prompt('Reason for dismissing (optional)') ?? '' })}>Dismiss</button>
+            {item.kind !== 'extraction_review' && <button className="btn-primary btn-sm" disabled={resolve.isPending} onClick={() => resolve.mutate({ status: 'resolved' })}>{item.kind === 'carryforward_proposal' ? 'Confirm' : 'Resolve'}</button>}
+            <button className="btn-ghost btn-sm" disabled={resolve.isPending} onClick={() => resolve.mutate({ status: 'dismissed', note: prompt(item.kind === 'extraction_review' ? 'Discard this draft? Reason (optional)' : 'Reason for dismissing (optional)') ?? '' })}>{item.kind === 'extraction_review' ? 'Discard draft' : 'Dismiss'}</button>
           </>}
         </div>
       </div>

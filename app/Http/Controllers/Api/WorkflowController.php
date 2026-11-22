@@ -69,6 +69,14 @@ class WorkflowController extends ApiController
             throw ApiError::notFound();
         }
         $status = $r->input('status') === 'dismissed' ? 'dismissed' : 'resolved';
+        if ($row->kind === 'extraction_review') {
+            // Values only reach payroll through the draft's Approve (checks + step-up); the inbox can only discard the draft.
+            if ($status === 'resolved') {
+                throw ApiError::conflict('Open the draft and use "Approve paycheck" — resolving here would not record the paycheck.');
+            }
+            DB::table('document_extractions')->where('workspace_id', $ctx->workspace->id)->where('id', $row->subject_id)->where('status', 'needs_review')
+                ->update(['status' => 'rejected', 'reviewed_by' => $ctx->user->id, 'updated_at' => now()]);
+        }
         DB::table('review_items')->where('id', $row->id)->update(['status' => $status, 'resolved_by' => $ctx->user->id, 'resolved_at' => now(),
             'resolution' => json_encode(['note' => mb_substr((string) $r->input('note', ''), 0, 1000)]), 'updated_at' => now()]);
         if ($row->kind === 'carryforward_proposal' && $status === 'resolved') {

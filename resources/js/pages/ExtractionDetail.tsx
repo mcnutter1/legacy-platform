@@ -51,6 +51,7 @@ export default function ExtractionDetail() {
           {((ex.checks ?? []) as { check: string; passed: boolean; message: string }[]).filter((c) => !c.passed).length > 0 && ex.status === 'needs_review' && (
             <Notice tone="warning"><ul className="list-disc pl-5">{((ex.checks ?? []) as { check: string; passed: boolean; message: string }[]).filter((c) => !c.passed).map((c) => <li key={c.check}>{c.message}</li>)}</ul></Notice>
           )}
+          {ex.status === 'approved' && <Notice tone="success">Paycheck recorded. It appears under <Link className="link" to={path('payroll')}>Payroll › Approved paychecks</Link> and the tax forecast is being refreshed.</Notice>}
           <ExtractionReview ex={ex} />
         </div>
       )}

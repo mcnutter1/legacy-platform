@@ -31,7 +31,8 @@ class PublicController extends Controller
         $checks['storage'] = is_dir($vault) && is_writable($vault) ? 'ok' : 'fail';
         $checks['vault_key'] = strlen((string) base64_decode((string) config('legacy.vault.root_key'), true)) === 32 ? 'ok' : 'fail';
         $py = (string) config('legacy.runner.python');
-        $checks['runner'] = is_file($py) ? 'ok' : 'missing';
+        // The venv python symlinks to the system interpreter, which open_basedir hides from FPM.
+        $checks['runner'] = is_file(dirname($py, 2).'/pyvenv.cfg') ? 'ok' : 'missing';
         $hb = DB::table('cache')->where('key', 'like', '%worker-heartbeat%')->max('expiration');
         $checks['worker'] = $hb && $hb > time() - 300 ? 'ok' : 'stale';
         $ok = ! in_array('fail', $checks, true);

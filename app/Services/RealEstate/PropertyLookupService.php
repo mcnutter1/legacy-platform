@@ -236,21 +236,35 @@ final class PropertyLookupService
         $target = $this->normStreet(trim(($geo['number'] ?? '').' '.($geo['street'] ?? '')));
         $street = $this->normStreet((string) ($geo['street'] ?? ''));
         $num = (string) ($geo['number'] ?? '');
+        $core = $street !== '' ? $this->streetCore($street) : '';
+        $hit = fn (array $r) => $num !== '' && $core !== '' && str_starts_with($this->normStreet((string) $r['location']), $num.' ') && str_contains($this->normStreet((string) $r['location']), $core);
+        // Geocodes are interpolated and the spatial window is finite; look the address up by text in the same municipality.
+        if ($rows && ! array_filter($rows, $hit) && preg_match('/^\d+[A-Z]?$/', $num) && preg_match('/^[A-Z0-9]+$/', $core)) {
+            $mun = (string) $rows[0]['mun_code'];
+            $extra = $this->parcelQuery(['where' => "PCL_MUN='".str_replace("'", "''", $mun)."' AND PROP_LOC LIKE '{$num} %{$core}%'"], $sources);
+            $seen = array_column($rows, 'pin');
+            $rows = array_merge($rows, array_filter($extra, fn ($r) => ! in_array($r['pin'], $seen, true)));
+            array_pop($sources);
+        }
+        $dir = fn (string $s) => preg_match('/^\S+ ([NSEW]) /', $s, $m) ? $m[1] : null;
+        $want = $dir($target);
         foreach ($rows as &$r) {
             $loc = $this->normStreet((string) $r['location']);
             $r['match'] = match (true) {
                 $loc === $target => 'exact',
-                $num !== '' && str_starts_with($loc, $num.' ') && $street !== '' && str_contains($loc, $this->streetCore($street)) => 'likely',
-                $street !== '' && str_contains($loc, $this->streetCore($street)) => 'same_street',
+                $hit($r) && ! ($want && $dir($loc) && $dir($loc) !== $want) => 'likely',
+                $core !== '' && str_contains($loc, $core) => 'same_street',
                 default => 'nearby',
             };
             $r['distance_m'] = isset($r['_lat']) ? (int) round($this->meters($geo['lat'], $geo['lon'], $r['_lat'], $r['_lon'])) : null;
+            // Along the same street, the closest house number beats the (interpolated) geocode distance.
+            $r['_gap'] = $r['match'] === 'same_street' && ctype_digit($num) && preg_match('/^(\d+)/', $loc, $m) ? abs((int) $m[1] - (int) $num) : PHP_INT_MAX;
         }
         unset($r);
         $rank = ['exact' => 0, 'likely' => 1, 'same_street' => 2, 'nearby' => 3];
-        usort($rows, fn ($a, $b) => [$rank[$a['match']], $a['distance_m'] ?? PHP_INT_MAX] <=> [$rank[$b['match']], $b['distance_m'] ?? PHP_INT_MAX]);
+        usort($rows, fn ($a, $b) => [$rank[$a['match']], $a['_gap'], $a['distance_m'] ?? PHP_INT_MAX] <=> [$rank[$b['match']], $b['_gap'], $b['distance_m'] ?? PHP_INT_MAX]);
 
-        return array_map(fn ($r) => array_diff_key($r, ['_lat' => 1, '_lon' => 1]), array_slice($rows, 0, 8));
+        return array_map(fn ($r) => array_diff_key($r, ['_lat' => 1, '_lon' => 1, '_gap' => 1]), array_slice($rows, 0, 8));
     }
 
     private function parcelsByBlockLot(string $mun, string $block, string $lot, ?string $qual, array &$sources): array
@@ -266,7 +280,7 @@ final class PropertyLookupService
     {
         try {
             $res = $this->http()->get((string) config('legacy.property_lookup.nj_parcels_url'), $params + [
-                'outFields' => self::PARCEL_FIELDS, 'returnGeometry' => 'false', 'returnCentroid' => 'true', 'outSR' => 4326, 'resultRecordCount' => 40, 'f' => 'json',
+                'outFields' => self::PARCEL_FIELDS, 'returnGeometry' => 'false', 'returnCentroid' => 'true', 'outSR' => 4326, 'resultRecordCount' => 400, 'f' => 'json',
             ]);
         } catch (ConnectionException) {
             $sources[] = ['name' => 'NJ parcels (MOD-IV)', 'status' => 'unavailable', 'message' => 'NJ parcel service did not respond.'];

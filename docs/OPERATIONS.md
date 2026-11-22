@@ -26,6 +26,7 @@ Host: shared McNutt Cloud server (`ubuntu@login.mcnutt.cloud`, 34.234.75.3). App
 | Artisan on server | `cd /opt/mcnutt-legacy/current && sudo -u mcnutt-legacy php artisan <cmd>` |
 | Run queued jobs now | `… artisan legacy:work interactive --once` |
 | Backup now | `sudo /usr/local/sbin/mcnutt-legacy-backup` |
+| Test email delivery | `… artisan legacy:notifications-test you@example.com` (generic message, prints provider status/id) |
 | Restore drill | `sudo /usr/local/sbin/mcnutt-legacy-restore-check` |
 | Renew/issue TLS | `sudo /usr/local/sbin/mcnutt-legacy-letsencrypt` |
 | Rotate vault key | add old key to `VAULT_PREVIOUS_KEYS=id:b64`, set new `VAULT_ROOT_KEY`/`VAULT_ROOT_KEY_ID`, `artisan config:cache`, `artisan legacy:vault-rewrap` |
@@ -39,7 +40,9 @@ Host: shared McNutt Cloud server (`ubuntu@login.mcnutt.cloud`, 34.234.75.3). App
    scope; joint data still needs an explicit grant. Losing all mapped roles suspends the membership (never the last
    administrator). Changing a member's role in Access pins it so McNutt Cloud no longer overrides it.
    Grant McNutt Cloud app access for `legacy` to each person in the login admin (deny by default).
-3. Set `NOTIFICATIONS_API_TOKEN` (app-scoped), `sudo -u mcnutt-legacy php artisan config:cache` (from `current`), sign in,
+3. `NOTIFICATIONS_API_TOKEN` is the McNutt Cloud system key `legacy-api-key` (role `notification-sender`); it must also have
+   app access to `notifications`, otherwise the API answers 401 `invalid_api_key`. Then
+   `sudo -u mcnutt-legacy php artisan config:cache` (from `current`), sign in,
    enroll the authenticator (Settings → Security), create the workspace.
 4. Escrow `legacy.env` + `backup.key` offline (two places). Configure `OFFSITE_RSYNC_TARGET` for offsite copies.
 5. Have a CPA review and approve tax rule packs (Tax → Rule packs) before relying on "calculated" status.

@@ -94,7 +94,7 @@ export interface Scope {
 
 export interface AccessOverview {
   me: { membership_id: string; role: string; is_administrator: boolean; steward_of: string[] };
-  members: { id: string; role: string; status: string; label: string | null; person_id: string | null; name: string | null; email: string | null; expires_at: string | null; is_recovery_admin: boolean }[];
+  members: { id: string; role: string; status: string; label: string | null; person_id: string | null; name: string | null; email: string | null; expires_at: string | null; is_recovery_admin: boolean; sso_managed: boolean }[];
   scopes: Scope[];
   grants: { id: string; membership_id: string; scope_id: string; domains: string[]; actions: string[]; years: number[] | null; purpose: string | null; expires_at: string | null; pending_approval: boolean; granted_by: string }[];
 }

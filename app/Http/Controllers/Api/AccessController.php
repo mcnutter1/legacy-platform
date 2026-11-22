@@ -32,7 +32,7 @@ class AccessController extends ApiController
             'me' => ['membership_id' => $ctx->membership->id, 'role' => $ctx->membership->role, 'is_administrator' => $isAdmin, 'steward_of' => $stewardOf],
             'members' => $members->map(fn ($m) => ['id' => $m->id, 'role' => $m->role, 'status' => $m->status, 'label' => $m->label, 'person_id' => $m->person_id,
                 'name' => $m->user?->name, 'email' => $isAdmin || $m->id === $ctx->membership->id ? ($m->user?->email ?? $m->invited_email) : null,
-                'expires_at' => $m->expires_at?->toIso8601String(), 'is_recovery_admin' => $m->is_recovery_admin])->values(),
+                'expires_at' => $m->expires_at?->toIso8601String(), 'is_recovery_admin' => $m->is_recovery_admin, 'sso_managed' => (bool) $m->sso_managed])->values(),
             'scopes' => $scopes->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'kind' => $s->kind, 'description' => $s->description,
                 'stewards' => DB::table('scope_stewards')->where('scope_id', $s->id)->pluck('membership_id'),
                 'my_access' => collect(\App\Support\Domains::ALL)->mapWithKeys(fn ($d) => [$d => array_values(array_filter(\App\Support\Domains::ACTIONS, fn ($a) => $ctx->can($d, $a, $s->id)))])->filter()->all()])->values(),

@@ -30,11 +30,12 @@ final class AccessService
                 'slug' => Str::slug($name).'-'.strtolower(Str::random(6)),
                 'timezone' => $timezone ?: 'America/New_York',
                 'created_by' => $user->id,
-                'settings' => ['dual_control_high_risk' => true],
+                'settings' => ['dual_control_high_risk' => true, 'sso_role_sync' => (bool) config('legacy.auth.role_sync')],
             ]);
             $m = Membership::create([
                 'workspace_id' => $ws->id, 'user_id' => $user->id, 'role' => 'administrator',
                 'status' => 'active', 'label' => $user->name, 'is_recovery_admin' => true, 'created_by' => $user->id,
+                'sso_managed' => (bool) config('legacy.auth.role_sync'),
             ]);
             $joint = $this->createScope($ws, 'Family (joint)', 'joint', $m, $user);
             $private = $this->createScope($ws, ($user->name ?: 'My').' (private)', 'private', $m, $user);
@@ -163,7 +164,7 @@ final class AccessService
             }
         }
         DB::transaction(function () use ($m, $status) {
-            $m->forceFill(['status' => $status, 'access_version' => $m->access_version + 1])->save();
+            $m->forceFill(['status' => $status, 'sso_suspended_at' => null, 'access_version' => $m->access_version + 1])->save();
             if ($status !== 'active') {
                 $this->revokeLiveAccess($m);
             }
@@ -181,7 +182,8 @@ final class AccessService
         }
         $m = $this->membership($ctx, $membershipId);
         DB::transaction(function () use ($m, $role) {
-            $m->forceFill(['role' => $role, 'access_version' => $m->access_version + 1])->save();
+            // A manual role pins the membership; McNutt Cloud role changes no longer override it.
+            $m->forceFill(['role' => $role, 'sso_managed' => false, 'access_version' => $m->access_version + 1])->save();
             $this->revokeLiveAccess($m);
             Audit::log('membership.role_changed', 'membership', $m->id, ['role' => $role]);
         });

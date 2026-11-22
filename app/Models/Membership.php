@@ -11,7 +11,7 @@ class Membership extends Model
 {
     use HasCanonicalUlids;
 
-    public const ROLES = ['administrator', 'principal', 'member', 'advisor', 'dependent'];
+    public const ROLES = ['administrator', 'principal', 'member', 'advisor', 'dependent', 'emergency_contact'];
 
     protected $guarded = ['id'];
 
@@ -23,6 +23,8 @@ class Membership extends Model
             'invite_expires_at' => 'datetime',
             'expires_at' => 'datetime',
             'is_recovery_admin' => 'boolean',
+            'sso_managed' => 'boolean',
+            'sso_suspended_at' => 'datetime',
             'archived_at' => 'datetime',
         ];
     }

@@ -5,7 +5,7 @@ import { useWorkspace } from '../app/workspace';
 import { Card, Dialog, FormError, Notice, PageHeader, Query, StatusBadge, Tabs } from '../components/ui';
 import { date, humanize } from '../lib/format';
 
-const ROLES = ['administrator', 'principal', 'member', 'advisor', 'dependent'];
+const ROLES = ['administrator', 'principal', 'member', 'advisor', 'dependent', 'emergency_contact'];
 const ACTIONS = ['read', 'write', 'approve', 'export', 'share'];
 
 function InviteDialog({ onClose }: { onClose: () => void }) {
@@ -105,7 +105,8 @@ export default function Access() {
                   <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Access ends</th>{d.me.is_administrator && <th />}</tr></thead>
                   <tbody>{d.members.map((m) => (
                     <tr key={m.id}>
-                      <td>{m.name ?? m.label}<span className="block text-xs text-muted">{m.email}</span>{m.is_recovery_admin && <span className="badge bg-pine-tint text-pine">Recovery admin</span>}</td>
+                      <td>{m.name ?? m.label}<span className="block text-xs text-muted">{m.email}</span>{m.is_recovery_admin && <span className="badge bg-pine-tint text-pine">Recovery admin</span>}
+                        {m.sso_managed && <span className="badge ml-1 bg-sunken text-muted" title="Role follows McNutt Cloud roles until changed here">McNutt Cloud role</span>}</td>
                       <td>{d.me.is_administrator && m.id !== d.me.membership_id ? (
                         <select aria-label="Role" className="input min-h-9 max-w-40" value={m.role} onChange={(e) => setRole.mutate({ id: m.id, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{humanize(r)}</option>)}</select>
                       ) : humanize(m.role)}</td>

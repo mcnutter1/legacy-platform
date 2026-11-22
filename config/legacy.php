@@ -24,6 +24,11 @@ return [
         'email_is_verified' => (bool) env('AUTH_EMAIL_IS_VERIFIED', false),
         // Central principals (uid) allowed to create workspaces. Empty = nobody; "*" = any signed-in user.
         'workspace_creators' => $csv(env('LEGACY_WORKSPACE_CREATORS', '')),
+        // Verified McNutt Cloud roles allowed to create workspaces, and central role => workspace role mapping.
+        'creator_roles' => $csv(env('LEGACY_CREATOR_ROLES', 'admin')),
+        'role_sync' => (bool) env('LEGACY_ROLE_SYNC', true),
+        'role_map' => collect($csv(env('LEGACY_ROLE_MAP', 'admin:administrator,family:member,ice:emergency_contact')))
+            ->mapWithKeys(fn ($pair) => [explode(':', $pair, 2)[0] => explode(':', $pair, 2)[1] ?? null])->filter()->all(),
     ],
 
     'stepup' => [

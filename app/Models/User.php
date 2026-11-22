@@ -39,6 +39,7 @@ class User extends Authenticatable
     {
         $allowed = config('legacy.auth.workspace_creators', []);
 
-        return in_array('*', $allowed, true) || in_array($this->central_principal_id, $allowed, true);
+        return in_array('*', $allowed, true) || in_array($this->central_principal_id, $allowed, true)
+            || (bool) array_intersect((array) ($this->central_roles ?? []), (array) config('legacy.auth.creator_roles', []));
     }
 }

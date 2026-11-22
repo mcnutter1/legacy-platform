@@ -42,6 +42,7 @@ class CentralSession
             'started_at' => time(),
         ]);
         Audit::log('auth.login', 'user', $user->id);
+        app(CentralRoleSync::class)->sync($user);
 
         return $user;
     }
@@ -78,7 +79,11 @@ class CentralSession
 
             return false;
         }
+        $rolesChanged = (array) ($user->central_roles ?? []) !== $id->roles;
         $user->forceFill(['central_roles' => $id->roles, 'email' => $id->email, 'name' => $id->name])->save();
+        if ($rolesChanged) {
+            app(CentralRoleSync::class)->sync($user);
+        }
         $data['validated_at'] = time();
         $data['exp'] = $id->expiresAt;
         session()->put(self::KEY, $data);

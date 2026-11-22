@@ -238,6 +238,16 @@ final class Registry
                 'heavy' => ['tool_catalog', 'last_preview'],
                 'list' => ['label', 'provider', 'mode', 'status', 'last_success_at'],
             ],
+            'business_ledger_lines' => [
+                'domain' => 'ledger', 'label' => 'Business books (cash basis)', 'readonly' => true, 'order' => ['posted_on', 'desc'], 'parent' => 'entity_id',
+                'fields' => [
+                    'entity_id' => '~s', 'connection_id' => '~s', 'external_id' => '~s', 'posted_on' => '~d', 'account_ref' => '~s', 'account_code' => '~s',
+                    'account_name' => '~s', 'account_type' => '~s', 'amount' => '~m', 'description' => '~s', 'source_key' => '~s',
+                ],
+                'list' => ['posted_on', 'account_name', 'account_type', 'amount', 'description'],
+                'filters' => ['entity_id', 'connection_id', 'account_type'],
+                'date' => 'posted_on',
+            ],
             'source_discrepancies' => [
                 'domain' => 'ledger', 'label' => 'Source conflicts', 'readonly' => true, 'order' => ['last_seen_at', 'desc'],
                 'fields' => [
@@ -548,6 +558,7 @@ final class Registry
                     'property_id' => 'ref:properties!', 'check_in' => 'd!', 'check_out' => 'd!',
                     'kind' => 'e:guest|personal|owner_maintenance|family_free|family_fair_rent|donated|blocked!', 'gross_rent' => 'm', 'cleaning_fee' => 'm',
                     'platform_fee' => 'm', 'taxes_collected' => 'm', 'payout' => 'm', 'refund' => 'm', 'cancelled' => 'b', 'channel' => 's', 'source' => '~s',
+                    'damage_recovery' => 'm', 'external_id' => '~s',
                 ],
                 'list' => ['property_id', 'check_in', 'check_out', 'kind', 'gross_rent', 'payout', 'cancelled'],
                 'date' => 'check_in',
@@ -571,6 +582,7 @@ final class Registry
                 'fields' => [
                     'property_id' => 'ref:properties!', 'incurred_on' => 'd!', 'category' => 'e:mortgage_interest|property_tax|insurance|repairs|maintenance|utilities|cleaning|management|supplies|hoa|advertising|travel|legal_professional|platform_fees|other!',
                     'amount' => 'm!', 'treatment' => 'e:expense|improvement|undetermined', 'improvement_id' => 'ref:property_improvements', 'transaction_id' => 'ref:transactions', 'notes' => 's', 'source' => '~s',
+                    'external_id' => '~s',
                 ],
                 'list' => ['property_id', 'incurred_on', 'category', 'amount', 'treatment'],
                 'date' => 'incurred_on',

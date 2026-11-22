@@ -35,6 +35,18 @@ abstract class Provider
         return (bool) config('legacy.features.'.$this->featureFlag());
     }
 
+    /** mcp: tools discovered and mapped at connect time; rest: a documented JSON API with a fixed contract. */
+    public function transport(): string
+    {
+        return 'mcp';
+    }
+
+    /** Record a connection feeds (property | entity), chosen when the connection is created; null = creates accounts. */
+    public function target(): ?string
+    {
+        return null;
+    }
+
     public function hostAllowed(string $url): bool
     {
         $p = parse_url($url);

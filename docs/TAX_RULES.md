@@ -62,6 +62,18 @@ labeled **estimate**. Editing a pack changes its hash and requires re-approval.
 Only **paid** installments become `property_expenses` (category `property_tax`), which is what the engine reads for
 Schedule A real-estate tax, the NJ property-tax deduction/credit and Schedule E. Projections never reach a return.
 
+## Business and rental inputs from connected systems (inputs, not engine rules)
+
+| Item | Treatment | Authority |
+| --- | --- | --- |
+| Side-business books (McNutt Finance `cash-events`) | When an entity has synced cash events for the year, they replace entity-tagged bank transactions as the Schedule C source for that year (no double count). Income accounts → line 1; contra-income → line 2; `cogs` subtype → line 4; expense accounts → the mapped line (auto-suggested from the account name, editable per connection) | IRC 61, 162; Schedule C instructions; cash method IRC 446(c)(1) |
+| Business meals | Mapped meals accounts are deducted at 50% | IRC 274(n)(1) |
+| Owner draws, distributions, income-tax payments | Mapped to `exclude`; never deducted | IRC 275(a)(1); draws are not expenses |
+| Entity eligibility | Only `sole_prop` and `llc` with `tax_classification = disregarded` reach Schedule C, and only with a person owner in the tax unit. S-corps and partnerships report through a K-1; connected books for them raise a missing-input note | Treas. Reg. 301.7701-3 |
+| Finance `reports/tax-estimate` | Stored as provisional comparison only; never an input | — |
+| Rental stays (Beach House PMS `stays`) | Guest and family-fair-rent stays count as rental days; rents = gross rent + cleaning fee + kept damage deposit − refunds; platform fees are expenses. Personal, family-free and donated stays are personal days; owner maintenance days are neither. Lodging taxes collected and remitted are excluded. Approved-but-unpaid bookings are not imported | IRC 280A(d)(2), Treas. Reg. 1.280A-1(e); kept deposits are rent (Pub. 527) |
+| Rental expenses (PMS `expenses`) | `expense` → Schedule E by category; `undetermined` (improvements, mortgage payments) blocks a clean run until classified as repair or improvement | Treas. Reg. 1.263(a)-3 |
+
 ## Explicitly unsupported (runs return `unsupported`, never a guess)
 
 Part-year / nonresident NJ (NJ-1040NR), multi-state credit beyond NJ resident credit inputs, foreign earned income

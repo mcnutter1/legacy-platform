@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\Integrations\FinanceSyncService;
 use App\Services\Integrations\IntegrationService;
 use App\Services\Integrations\SyncService;
 use App\Support\ApiError;
+use App\Support\Dec;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +36,8 @@ class IntegrationController extends ApiController
 
     public function store(Request $r): JsonResponse
     {
-        $d = $this->validated($r, ['provider' => 'required|string', 'label' => 'nullable|string|max:120', 'scope_id' => 'required|string', 'server_url' => 'nullable|string|max:255']);
+        $d = $this->validated($r, ['provider' => 'required|string', 'label' => 'nullable|string|max:120', 'scope_id' => 'required|string', 'server_url' => 'nullable|string|max:255',
+            'property_id' => 'nullable|string|max:26', 'entity_id' => 'nullable|string|max:26']);
 
         return $this->ok($this->present($this->svc()->create($d), true), 201);
     }
@@ -46,9 +49,21 @@ class IntegrationController extends ApiController
             throw ApiError::conflict('This connection changed. Reload and try again.');
         }
         $d = $this->validated($r, ['label' => 'nullable|string|max:120', 'import_transactions' => 'nullable|boolean', 'auto_commit_transactions' => 'nullable|boolean',
-            'transactions_days' => 'nullable|integer|min:1|max:730', 'sync_interval_hours' => 'nullable|integer|min:1|max:720']);
+            'transactions_days' => 'nullable|integer|min:1|max:730', 'sync_interval_hours' => 'nullable|integer|min:1|max:720',
+            'property_id' => 'nullable|string|max:26', 'entity_id' => 'nullable|string|max:26']);
 
         return $this->ok($this->present($this->svc()->updateOptions($connection, $d), true));
+    }
+
+    public function accountMap(Request $r, string $connection): JsonResponse
+    {
+        $c = $this->svc()->connection($connection, 'write');
+        if ($this->ifMatch($r) !== (int) $c->edit_version) {
+            throw ApiError::conflict('This connection changed. Reload and try again.');
+        }
+        $d = $this->validated($r, ['map' => 'required|array|max:500', 'map.*' => 'string|max:32']);
+
+        return $this->ok($this->present($this->svc()->setAccountMap($connection, $d['map']), true));
     }
 
     public function key(Request $r, string $connection): JsonResponse
@@ -156,6 +171,66 @@ class IntegrationController extends ApiController
         return $this->ok((new SyncService($this->ctx()))->resolve($conflict, $d['action'], $d['note'] ?? null, $d['prefer_connection_id'] ?? null));
     }
 
+    /** Earnings › Businesses & rentals: year-to-date view of connected books and rental activity. */
+    public function businessAndRentals(Request $r): JsonResponse
+    {
+        $ctx = $this->ctx();
+        $y = max(2000, min(2100, (int) ($r->query('year') ?: now()->year)));
+        $conns = $ctx->constrain(DB::table('source_connections'), 'ledger')->whereNull('archived_at')->whereIn('provider', ['invoices', 'property_manager'])->get();
+        $entityIds = $ctx->constrain(DB::table('business_ledger_lines'), 'ledger')->whereNull('archived_at')->whereBetween('posted_on', ["{$y}-01-01", "{$y}-12-31"])
+            ->distinct()->pluck('entity_id')->merge($conns->where('provider', 'invoices')->map(fn ($c) => (json_decode((string) $c->config, true) ?: [])['entity_id'] ?? null)->filter())->unique();
+        $entities = $ctx->constrain(DB::table('legal_entities'), 'governance')->whereIn('id', $entityIds)->whereNull('archived_at')->get()->keyBy('id');
+        $businesses = [];
+        foreach ($entityIds as $eid) {
+            $totals = $ctx->constrain(DB::table('business_ledger_lines'), 'ledger')->where('entity_id', $eid)->whereNull('archived_at')
+                ->whereBetween('posted_on', ["{$y}-01-01", "{$y}-12-31"])->selectRaw('connection_id, account_ref, account_type, SUM(amount) as total, COUNT(*) as n')
+                ->groupBy('connection_id', 'account_ref', 'account_type')->get();
+            $sc = FinanceSyncService::scheduleC($totals, FinanceSyncService::accountMaps($totals->pluck('connection_id')));
+            $e = $entities[$eid] ?? null;
+            $owners = DB::table('ownership_interests')->where('subject_type', 'entity')->where('subject_id', $eid)->whereNull('archived_at')->count();
+            $conn = $conns->first(fn ($c) => ((json_decode((string) $c->config, true) ?: [])['entity_id'] ?? null) === $eid);
+            $businesses[] = ['entity_id' => $eid, 'name' => $e->name ?? 'Business', 'kind' => $e->kind ?? null, 'tax_classification' => $e->tax_classification ?? null,
+                'owners' => $owners, 'lines' => (int) $totals->sum('n'),
+                'book' => array_map(fn ($v) => Dec::round($v, 2), $sc['book']), 'schedule_c' => ['gross' => Dec::round($sc['gross'], 2), 'returns' => Dec::round($sc['returns'], 2),
+                    'cogs' => Dec::round($sc['cogs'], 2), 'expenses' => array_map(fn ($v) => Dec::round($v, 2), $sc['expenses']), 'net' => Dec::round($sc['net'], 2),
+                    'meals_nondeductible' => Dec::round($sc['meals_nondeductible'], 2), 'excluded' => Dec::round($sc['excluded'], 2), 'unmapped' => $sc['unmapped']],
+                'connection' => $conn ? ['id' => $conn->id, 'label' => $conn->label, 'status' => $conn->status, 'last_success_at' => $conn->last_success_at,
+                    'tax_estimate' => (json_decode((string) $conn->last_sync_stats, true) ?: [])['tax_estimate'] ?? null] : null];
+        }
+        $rentals = [];
+        $props = $ctx->constrain(DB::table('properties'), 'real_estate')->whereNull('archived_at')->whereIn('kind', ['rental_ltr', 'rental_str', 'mixed', 'second_home'])->get();
+        foreach ($props as $p) {
+            $stays = DB::table('property_stays')->where('property_id', $p->id)->whereNull('archived_at')->where('check_out', '>', "{$y}-01-01")->where('check_in', '<=', "{$y}-12-31")->get();
+            $conn = $conns->first(fn ($c) => ((json_decode((string) $c->config, true) ?: [])['property_id'] ?? null) === $p->id);
+            if ($stays->isEmpty() && ! $conn) {
+                continue;
+            }
+            $rents = '0';
+            $fees = '0';
+            $days = ['rental' => 0, 'personal' => 0, 'owner_maintenance' => 0, 'blocked' => 0];
+            foreach ($stays->where('cancelled', false) as $s) {
+                $nights = max(0, (int) round((min(strtotime($s->check_out), strtotime(($y + 1).'-01-01')) - max(strtotime($s->check_in), strtotime("{$y}-01-01"))) / 86400));
+                $bucket = match ($s->kind) { 'guest', 'family_fair_rent' => 'rental', 'personal', 'family_free', 'donated' => 'personal', 'owner_maintenance' => 'owner_maintenance', default => 'blocked' };
+                $days[$bucket] += $nights;
+                if ($bucket === 'rental') {
+                    $rents = Dec::sub(Dec::add($rents, Dec::norm($s->gross_rent ?? '0'), Dec::norm($s->cleaning_fee ?? '0'), Dec::norm($s->damage_recovery ?? '0')), Dec::norm($s->refund ?? '0'));
+                    $fees = Dec::add($fees, Dec::norm($s->platform_fee ?? '0'));
+                }
+            }
+            $exp = DB::table('property_expenses')->where('property_id', $p->id)->whereNull('archived_at')->whereBetween('incurred_on', ["{$y}-01-01", "{$y}-12-31"])
+                ->selectRaw('treatment, SUM(amount) as total, COUNT(*) as n')->groupBy('treatment')->get()->keyBy('treatment');
+            $rentals[] = ['property_id' => $p->id, 'name' => $p->name, 'kind' => $p->kind, 'rents' => Dec::round($rents, 2), 'platform_fees' => Dec::round($fees, 2),
+                'expenses' => Dec::round(Dec::norm((string) ($exp['expense']->total ?? '0')), 2), 'improvements' => Dec::round(Dec::norm((string) ($exp['improvement']->total ?? '0')), 2),
+                'undetermined' => (int) ($exp['undetermined']->n ?? 0), 'undetermined_amount' => Dec::round(Dec::norm((string) ($exp['undetermined']->total ?? '0')), 2),
+                'days' => $days, 'stays' => $stays->count(),
+                'connection' => $conn ? ['id' => $conn->id, 'label' => $conn->label, 'status' => $conn->status, 'last_success_at' => $conn->last_success_at,
+                    'reconciliation' => collect((json_decode((string) $conn->last_sync_stats, true) ?: [])['reconciliation'] ?? [])->firstWhere('year', $y)] : null];
+        }
+
+        return $this->ok(['year' => $y, 'businesses' => $businesses, 'rentals' => $rentals,
+            'connections' => $conns->map(fn ($c) => ['id' => $c->id, 'provider' => $c->provider, 'label' => $c->label, 'status' => $c->status])->values()]);
+    }
+
     private function throttle(string $name): void
     {
         $key = $name.':'.$this->ctx()->user->id;
@@ -176,11 +251,16 @@ class IntegrationController extends ApiController
             'sync_interval_hours' => (int) $c->sync_interval_hours, 'options' => array_intersect_key($cfg, array_flip(['import_transactions', 'auto_commit_transactions', 'transactions_days'])),
             'tool_map' => json_decode((string) $c->tool_map, true), 'last_sync_stats' => json_decode((string) $c->last_sync_stats, true),
             'linked_accounts' => DB::table('external_links')->where('connection_id', $c->id)->where('entity_type', 'account')->whereNull('archived_at')->count(),
+            'target' => array_intersect_key($cfg, array_flip(['property_id', 'entity_id'])) ?: null, 'business' => $cfg['business'] ?? null,
             'edit_version' => (int) $c->edit_version,
         ];
         if ($full) {
             $out['tool_catalog'] = json_decode((string) $c->tool_catalog, true);
             $out['last_preview'] = json_decode((string) $c->last_preview, true);
+            if ($c->provider === 'invoices') {
+                $out['accounts'] = array_values(array_map(fn ($a) => $a + ['line' => $cfg['account_map'][$a['id']] ?? 'other'],
+                    array_filter((array) ($cfg['accounts'] ?? []), fn ($a) => in_array($a['type'] ?? '', ['income', 'expense'], true))));
+            }
         }
 
         return $out;

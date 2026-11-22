@@ -4,7 +4,9 @@ namespace App\Jobs\Handlers;
 
 use App\Jobs\JobHandler;
 use App\Models\ComputeJob;
+use App\Services\Integrations\FinanceSyncService;
 use App\Services\Integrations\IntegrationError;
+use App\Services\Integrations\PmsSyncService;
 use App\Services\Integrations\SyncService;
 use App\Support\AccessContext;
 use App\Support\ApiError;
@@ -29,7 +31,11 @@ class IntegrationSyncHandler implements JobHandler
         if (! $c) {
             throw new ApiError('not_found', 'Connection not found.', 404);
         }
-        $svc = new SyncService($ctx);
+        $svc = match ($c->provider) {
+            'property_manager' => new PmsSyncService($ctx),
+            'invoices' => new FinanceSyncService($ctx),
+            default => new SyncService($ctx),
+        };
         try {
             return ['_done' => ! empty($job->params['dry_run']) ? $svc->preview($c) : $svc->sync($c)];
         } catch (IntegrationError $e) {

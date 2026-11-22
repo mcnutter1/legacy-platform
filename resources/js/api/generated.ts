@@ -442,6 +442,28 @@ export interface SourceConnections {
   last_job_id?: string | null;
 }
 
+export interface BusinessLedgerLines {
+  id: Ulid;
+  type: 'business_ledger_lines';
+  scope_id?: Ulid;
+  edit_version: number;
+  _title: string | null;
+  _redacted?: string[];
+  created_at: string | null;
+  updated_at: string | null;
+  entity_id?: string | null;
+  connection_id?: string | null;
+  external_id?: string | null;
+  posted_on?: ISODate | null;
+  account_ref?: string | null;
+  account_code?: string | null;
+  account_name?: string | null;
+  account_type?: string | null;
+  amount?: Decimal | null;
+  description?: string | null;
+  source_key?: string | null;
+}
+
 export interface SourceDiscrepancies {
   id: Ulid;
   type: 'source_discrepancies';
@@ -1278,6 +1300,8 @@ export interface PropertyStays {
   cancelled?: boolean | null;
   channel?: string | null;
   source?: string | null;
+  damage_recovery?: Decimal | null;
+  external_id?: string | null;
 }
 
 export interface PropertyUseLogs {
@@ -1335,6 +1359,7 @@ export interface PropertyExpenses {
   transaction_id?: Ulid | null;
   notes?: string | null;
   source?: string | null;
+  external_id?: string | null;
 }
 
 export interface Liabilities {
@@ -1693,6 +1718,7 @@ export interface ResourceTypes {
   estate_scenarios: EstateScenarios;
   estate_runs: EstateRuns;
   source_connections: SourceConnections;
+  business_ledger_lines: BusinessLedgerLines;
   source_discrepancies: SourceDiscrepancies;
   accounts: Accounts;
   transactions: Transactions;

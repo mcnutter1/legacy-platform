@@ -15,7 +15,7 @@ const NAV: { group: string; items: { to: string; label: string; icon: string }[]
     { to: 'real-estate', label: 'Real estate', icon: '⌂' }, { to: 'assets', label: 'Assets', icon: '◆' }, { to: 'debts', label: 'Debts', icon: '⊖' },
     { to: 'imports', label: 'Imports', icon: '⇪' }, { to: 'integrations', label: 'Integrations', icon: '⇄' }, { to: 'year-close', label: 'Year close', icon: '▦' },
   ] },
-  { group: 'Earnings & tax', items: [{ to: 'payroll', label: 'Payroll', icon: '¤' }, { to: 'equity', label: 'Equity', icon: '◈' }, { to: 'tax', label: 'Tax', icon: '§' }] },
+  { group: 'Earnings & tax', items: [{ to: 'payroll', label: 'Payroll', icon: '¤' }, { to: 'business-income', label: 'Businesses & rentals', icon: '▤' }, { to: 'equity', label: 'Equity', icon: '◈' }, { to: 'tax', label: 'Tax', icon: '§' }] },
   { group: 'Planning', items: [{ to: 'planning', label: 'Retirement & goals', icon: '↗' }, { to: 'estate', label: 'Estate', icon: '⚖' }, { to: 'insurance', label: 'Insurance', icon: '☂' }] },
   { group: 'Family', items: [{ to: 'family', label: 'People & entities', icon: '⚇' }, { to: 'governance', label: 'Governance', icon: '✦' }, { to: 'vault', label: 'Vault', icon: '▣' }, { to: 'reports', label: 'Reports', icon: '⎙' }] },
   { group: 'Admin', items: [{ to: 'access', label: 'Access', icon: '⚿' }, { to: 'settings', label: 'Settings', icon: '⚙' }, { to: 'activity', label: 'Activity', icon: '≋' }, { to: 'records', label: 'All records', icon: '⋯' }] },

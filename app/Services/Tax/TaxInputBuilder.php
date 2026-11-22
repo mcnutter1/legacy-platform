@@ -2,6 +2,7 @@
 
 namespace App\Services\Tax;
 
+use App\Services\Integrations\FinanceSyncService;
 use App\Support\AccessContext;
 use App\Support\ApiError;
 use App\Support\Dec;
@@ -237,12 +238,34 @@ final class TaxInputBuilder
     private function scheduleC(int $year, array $personIds): array
     {
         $out = [];
-        $entities = $this->ctx->constrain(DB::table('legal_entities'), 'governance', 'read')->whereNull('archived_at')
-            ->where(fn ($q) => $q->where('kind', 'sole_prop')->orWhere(fn ($w) => $w->where('kind', 'llc')->where('tax_classification', 'disregarded')))->get();
+        $booked = $this->ctx->constrain(DB::table('business_ledger_lines'), 'ledger', 'read')->whereNull('archived_at')
+            ->whereBetween('posted_on', ["{$year}-01-01", "{$year}-12-31"])->distinct()->pluck('entity_id')->flip();
+        $entities = $this->ctx->constrain(DB::table('legal_entities'), 'governance', 'read')->whereNull('archived_at')->get();
         foreach ($entities as $e) {
+            $eligible = $e->kind === 'sole_prop' || ($e->kind === 'llc' && $e->tax_classification === 'disregarded');
+            if (! $eligible) {
+                if (isset($booked[$e->id])) {
+                    $this->missing[] = match (true) {
+                        $e->kind === 'llc' && ! $e->tax_classification => "{$e->name}: set the LLC's tax classification (disregarded for a single-member LLC) so its connected books reach Schedule C.",
+                        in_array($e->kind, ['s_corp', 'partnership'], true) || in_array($e->tax_classification, ['s_corp', 'partnership'], true) => "{$e->name}: business books are connected, but an S-corporation or partnership reaches this return through its K-1. Add the K-1 as a tax document.",
+                        default => "{$e->name}: business books are connected, but a {$e->kind} is not reported on Schedule C.",
+                    };
+                }
+
+                continue;
+            }
             $owner = DB::table('ownership_interests')->where('subject_type', 'entity')->where('subject_id', $e->id)->where('owner_type', 'person')
                 ->whereIn('owner_id', $personIds)->whereNull('archived_at')->value('owner_id');
             if (! $owner) {
+                if (isset($booked[$e->id])) {
+                    $this->missing[] = "{$e->name}: connected books found but no owner in this tax unit. Record the owner under the entity's ownership interests.";
+                }
+
+                continue;
+            }
+            if (isset($booked[$e->id])) {
+                $out[] = $this->scheduleCFromBooks($e, $owner, $year);
+
                 continue;
             }
             $txs = $this->ctx->constrain(DB::table('transactions'), 'ledger', 'read')->where('entity_id', $e->id)->whereNull('archived_at')
@@ -273,6 +296,25 @@ final class TaxInputBuilder
         return $out;
     }
 
+    /** Cash-basis books from a connected bookkeeping system replace entity-tagged bank transactions for the year (no double count). */
+    private function scheduleCFromBooks(object $e, string $owner, int $year): array
+    {
+        $totals = FinanceSyncService::accountTotals($e->id, $year);
+        $sc = FinanceSyncService::scheduleC($totals, FinanceSyncService::accountMaps($totals->pluck('connection_id')));
+        $this->assumptions[] = "{$e->name}: Schedule C from connected cash-basis books; transactions tagged to this business in bank feeds are not counted again for {$year}.";
+        if (Dec::cmp($sc['meals_nondeductible'], '0') > 0) {
+            $this->assumptions[] = "{$e->name}: meals limited to 50% (".Dec::round($sc['meals_nondeductible'], 2).' not deducted).';
+        }
+        if ($sc['unmapped'] > 0) {
+            $this->missing[] = "{$e->name}: {$sc['unmapped']} bookkeeping account(s) have no Schedule C line; review the account mapping on the connection.";
+        }
+        $lines = DB::table('business_ledger_lines')->where('entity_id', $e->id)->whereNull('archived_at')->whereBetween('posted_on', ["{$year}-01-01", "{$year}-12-31"])
+            ->orderBy('posted_on')->limit(200)->pluck('id');
+
+        return ['person' => $owner, 'name' => $e->name, 'gross' => Dec::round($sc['gross'], 2), 'returns' => Dec::round($sc['returns'], 2), 'cogs' => Dec::round($sc['cogs'], 2),
+            'expenses' => array_map(fn ($v) => Dec::round($v, 2), $sc['expenses']) ?: new \stdClass, 'facts' => $lines->map(fn ($i) => 'business_ledger_line:'.$i)->all()];
+    }
+
     private function rentals(int $year): array
     {
         $out = [];
@@ -293,7 +335,7 @@ final class TaxInputBuilder
                 if (in_array($s->kind, ['guest', 'family_fair_rent'], true)) {
                     $rentalNights += $nights;
                     $guestStays++;
-                    $rents = Dec::add($rents, Dec::norm($s->gross_rent ?? '0'), Dec::norm($s->cleaning_fee ?? '0'));
+                    $rents = Dec::add($rents, Dec::norm($s->gross_rent ?? '0'), Dec::norm($s->cleaning_fee ?? '0'), Dec::norm($s->damage_recovery ?? '0'));
                     $rents = Dec::sub($rents, Dec::norm($s->refund ?? '0'));
                     $fees = Dec::add($fees, Dec::norm($s->platform_fee ?? '0'));
                 } elseif (in_array($s->kind, ['personal', 'family_free', 'donated'], true)) {

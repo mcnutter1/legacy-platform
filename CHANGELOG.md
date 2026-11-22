@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased — side-business and rental ingest
+
+### Implemented
+- Integrations: **Beach House PMS** (Family Office API, `fo_` key) feeds one property's stays and expenses;
+  **McNutt Finance** (Data API, `fin_` key, one per business) feeds a business entity's cash-basis books
+  (`business_ledger_lines`). Both follow key → Test → Preview → Approve → Sync, run as `integration.sync` jobs and
+  reconcile against the provider's own P&L.
+- PMS sync upserts by `external_id`, keeps a person's reclassification (family/donated stays, expense category and
+  treatment), archives rows deleted in the PMS, records kept damage deposits (`damage_recovery`) and links expenses the
+  PMS imported from Monarch to the Monarch transaction.
+- Finance sync creates the business entity from the Finance profile when none is chosen, suggests a Schedule C line per
+  account (editable), and stores the Finance tax estimate as provisional.
+- Tax inputs: Schedule C uses connected books when present for the year (meals 50%, draws and income tax excluded);
+  Schedule E rents include kept damage deposits. Sources in `docs/TAX_RULES.md`.
+- New page Earnings › Businesses & rentals.
+
+### Verified
+- `BusinessAndRentalSourcesTest` with fictional fixtures (idempotent re-sync, user edits kept, deletions, Schedule C and
+  Schedule E inputs). Not yet verified against the live PMS/Finance APIs. Runner rules unchanged.
+
+### Not implemented
+- Finance accrual journals, invoices, payments and expenses datasets (cash events are sufficient for a cash-basis
+  Schedule C); `deletions` (cash events are append-only).
+
 ## Unreleased — Monmouth County records
 
 ### Implemented

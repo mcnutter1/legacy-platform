@@ -152,6 +152,8 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::post('/integrations/{connection}/oauth/complete', [IntegrationController::class, 'oauthComplete'])->where('connection', $ulid);
         Route::post('/integrations/{connection}/test', [IntegrationController::class, 'test'])->where('connection', $ulid);
         Route::put('/integrations/{connection}/tools', [IntegrationController::class, 'tools'])->where('connection', $ulid);
+        Route::put('/integrations/{connection}/account-map', [IntegrationController::class, 'accountMap'])->where('connection', $ulid);
+        Route::get('/earnings/business-and-rentals', [IntegrationController::class, 'businessAndRentals']);
         Route::post('/integrations/{connection}/preview', [IntegrationController::class, 'preview'])->where('connection', $ulid);
         Route::post('/integrations/{connection}/approve', [IntegrationController::class, 'approve'])->where('connection', $ulid);
         Route::post('/integrations/{connection}/sync', [IntegrationController::class, 'sync'])->where('connection', $ulid);

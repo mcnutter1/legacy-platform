@@ -928,6 +928,32 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/earnings/business-and-rentals": {
+            "get": {
+                "operationId": "get_workspaces_workspace_earnings_business_and_rentals",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/equity/grants/{grant}/events": {
             "post": {
                 "operationId": "post_workspaces_workspace_equity_grants_grant_events",
@@ -1912,6 +1938,43 @@
                     },
                     {
                         "$ref": "#/components/parameters/IfMatch"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/account-map": {
+            "put": {
+                "operationId": "put_workspaces_workspace_integrations_connection_account_map",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
                     },
                     {
                         "name": "workspace",
@@ -6105,6 +6168,75 @@
                 ],
                 "description": "Data sources (ledger)"
             },
+            "BusinessLedgerLines": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "scope_id": {
+                        "type": "string"
+                    },
+                    "edit_version": {
+                        "type": "integer"
+                    },
+                    "_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "connection_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "external_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "posted_on": {
+                        "type": "string",
+                        "format": "date",
+                        "readOnly": true
+                    },
+                    "account_ref": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "account_code": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "account_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "account_type": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "amount": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)",
+                        "readOnly": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "source_key": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [],
+                "description": "Business books (cash basis) (ledger)"
+            },
             "SourceDiscrepancies": {
                 "type": "object",
                 "properties": {
@@ -9219,6 +9351,15 @@
                     "source": {
                         "type": "string",
                         "readOnly": true
+                    },
+                    "damage_recovery": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "external_id": {
+                        "type": "string",
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -9427,6 +9568,10 @@
                         "type": "string"
                     },
                     "source": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "external_id": {
                         "type": "string",
                         "readOnly": true
                     }
@@ -13447,6 +13592,137 @@
                 },
                 {
                     "name": "last_job_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                }
+            ]
+        },
+        "business_ledger_lines": {
+            "type": "business_ledger_lines",
+            "label": "Business books (cash basis)",
+            "domain": "ledger",
+            "title": null,
+            "list": [
+                "posted_on",
+                "account_name",
+                "account_type",
+                "amount",
+                "description"
+            ],
+            "readonly": true,
+            "creatable": false,
+            "parent": "entity_id",
+            "unscoped": false,
+            "searchable": false,
+            "date": "posted_on",
+            "fields": [
+                {
+                    "name": "entity_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "connection_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "external_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "posted_on",
+                    "type": "d",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "account_ref",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "account_code",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "account_name",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "account_type",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "amount",
+                    "type": "m",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "description",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "source_key",
                     "type": "s",
                     "required": false,
                     "readonly": true,
@@ -19130,6 +19406,26 @@
                     "ref": null,
                     "poly_type_field": null,
                     "sensitive": null
+                },
+                {
+                    "name": "damage_recovery",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "external_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
                 }
             ]
         },
@@ -19463,6 +19759,16 @@
                 },
                 {
                     "name": "source",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "external_id",
                     "type": "s",
                     "required": false,
                     "readonly": true,

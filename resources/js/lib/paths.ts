@@ -20,7 +20,7 @@ const DETAIL: Record<string, (id: string) => string> = {
 const SECTION: Record<string, string> = {
   transactions: 'accounts', holdings: 'portfolio', lots: 'portfolio', instruments: 'portfolio', balance_snapshots: 'accounts',
   assets: 'assets', valuations: 'assets', liabilities: 'debts', liability_payments: 'debts',
-  employments: 'payroll', payroll_snapshots: 'payroll', equity_tranches: 'equity', equity_events: 'equity', company_valuations: 'equity',
+  employments: 'payroll', payroll_snapshots: 'payroll', business_ledger_lines: 'business-income', equity_tranches: 'equity', equity_events: 'equity', company_valuations: 'equity',
   tax_documents: 'tax', tax_residencies: 'tax', tax_strategies: 'tax',
   plans: 'planning', family_goals: 'planning',
   estate_documents: 'estate', estate_scenarios: 'estate', beneficiary_designations: 'estate', authority_roles: 'estate', trust_details: 'estate',

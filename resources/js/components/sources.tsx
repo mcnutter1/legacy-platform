@@ -7,8 +7,9 @@ const STYLE: Record<string, { bg: string; fg: string; glyph: string; name: strin
   monarch: { bg: '#FF692D', fg: '#fff', glyph: 'M', name: 'Monarch Money' },
   snowball: { bg: '#2E6BE6', fg: '#fff', glyph: 'S', name: 'Snowball Analytics' },
   manual: { bg: 'transparent', fg: 'currentColor', glyph: '✎', name: 'Entered manually' },
-  invoices: { bg: '#5B6B7A', fg: '#fff', glyph: 'I', name: 'Invoices' },
-  property_manager: { bg: '#5B6B7A', fg: '#fff', glyph: 'P', name: 'Property manager' },
+  invoices: { bg: '#3F7D5A', fg: '#fff', glyph: 'F', name: 'McNutt Finance' },
+  property_manager: { bg: '#1F8A9E', fg: '#fff', glyph: 'B', name: 'Beach House PMS' },
+  beach_house_pms: { bg: '#1F8A9E', fg: '#fff', glyph: 'B', name: 'Beach House PMS' },
   generic_csv: { bg: '#5B6B7A', fg: '#fff', glyph: 'C', name: 'CSV import' },
 };
 

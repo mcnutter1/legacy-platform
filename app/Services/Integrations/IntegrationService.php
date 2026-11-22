@@ -3,7 +3,9 @@
 namespace App\Services\Integrations;
 
 use App\Jobs\JobService;
+use App\Services\Integrations\Providers\FinanceProvider;
 use App\Services\Integrations\Providers\MonarchProvider;
+use App\Services\Integrations\Providers\PropertyManagerProvider;
 use App\Services\Integrations\Providers\Provider;
 use App\Services\Integrations\Providers\SnowballProvider;
 use App\Support\AccessContext;
@@ -19,7 +21,8 @@ use Illuminate\Support\Str;
 /** Connection lifecycle for MCP data sources: create → authorize (key or OAuth) → test → preview → approve → sync → disconnect. */
 final class IntegrationService
 {
-    public const PROVIDERS = ['monarch' => MonarchProvider::class, 'snowball' => SnowballProvider::class];
+    public const PROVIDERS = ['monarch' => MonarchProvider::class, 'snowball' => SnowballProvider::class,
+        'property_manager' => PropertyManagerProvider::class, 'invoices' => FinanceProvider::class];
 
     public const LOOPBACK_REDIRECT = 'http://127.0.0.1:33418/callback';
 
@@ -45,7 +48,7 @@ final class IntegrationService
         return array_values(array_map(function (string $cls) {
             $p = new $cls;
 
-            return ['provider' => $p->key(), 'label' => $p->label(), 'auth_kind' => $p->authKind(), 'enabled' => $p->enabled(),
+            return ['provider' => $p->key(), 'label' => $p->label(), 'auth_kind' => $p->authKind(), 'enabled' => $p->enabled(), 'transport' => $p->transport(), 'target' => $p->target(),
                 'default_url' => $p->defaultUrl(), 'instructions' => $p->instructions(), 'redirect_uri' => $p->authKind() === 'oauth' ? self::redirectUri() : null];
         }, self::PROVIDERS));
     }
@@ -61,12 +64,17 @@ final class IntegrationService
             throw ApiError::forbidden();
         }
         $url = $this->serverUrl($p, $data['server_url'] ?? null);
+        $config = match ($p->target()) {
+            'property' => ['property_id' => PmsSyncService::assertTarget($this->ctx, $data['property_id'] ?? null)],
+            'entity' => ['entity_id' => FinanceSyncService::assertTarget($this->ctx, $data['entity_id'] ?? null)],
+            default => ['transactions_days' => 90, 'import_transactions' => true, 'auto_commit_transactions' => false],
+        };
         $id = (string) Str::ulid();
         DB::table('source_connections')->insert([
             'id' => $id, 'workspace_id' => $this->ctx->workspace->id, 'scope_id' => $scopeId, 'provider' => $p->key(),
-            'label' => mb_substr(trim((string) ($data['label'] ?? '')) ?: $p->label(), 0, 120), 'mode' => 'mcp', 'status' => 'needs_auth',
+            'label' => mb_substr(trim((string) ($data['label'] ?? '')) ?: $p->label(), 0, 120), 'mode' => $p->transport() === 'rest' ? 'api' : 'mcp', 'status' => 'needs_auth',
             'auth_kind' => $p->authKind(), 'server_url' => $url, 'freshness_hours' => 48, 'sync_interval_hours' => 24,
-            'config' => json_encode(['transactions_days' => 90, 'import_transactions' => true, 'auto_commit_transactions' => false]),
+            'config' => json_encode($config),
             'owner_membership_id' => $this->ctx->membership->id, 'created_by' => $this->ctx->user->id, 'updated_by' => $this->ctx->user->id,
             'created_at' => now(), 'updated_at' => now(), 'edit_version' => 1,
         ]);
@@ -94,7 +102,7 @@ final class IntegrationService
         }
         $key = trim($key);
         if (! preg_match('/^[\x21-\x7E]{8,512}$/', $key)) {
-            throw new ApiError('validation_failed', 'That does not look like an MCP key.', 422, ['key' => ['Paste the full key shown once on the provider\'s MCP tab.']]);
+            throw new ApiError('validation_failed', 'That does not look like an API key.', 422, ['key' => ['Paste the full key the provider showed once when you created it.']]);
         }
         $this->update($c, [
             'credential_encrypted' => Crypt::encryptString(json_encode(['api_key' => $key])), 'credential_hint' => mb_substr($key, 0, 8).'…',
@@ -220,6 +228,18 @@ final class IntegrationService
     {
         $c = $this->connection($id, 'write');
         $p = self::provider($c->provider);
+        if ($p->transport() === 'rest') {
+            try {
+                $out = $c->provider === 'invoices' ? (new FinanceSyncService($this->ctx))->test($c) : (new PmsSyncService($this->ctx))->test($c);
+            } catch (IntegrationError $e) {
+                $this->update($c, ['status' => $e->reason === 'unauthorized' ? 'needs_auth' : 'error', 'last_error' => $e->getMessage(), 'last_sync_at' => now()]);
+                throw new ApiError('integration_'.$e->reason, $e->getMessage(), 502);
+            }
+            $this->update($this->connection($c->id, 'write'), ['last_error' => null, 'status' => $c->approved_at ? 'active' : 'needs_review']);
+            Audit::log('integration.tested', 'source_connection', $c->id, ['provider' => $c->provider], scopeId: $c->scope_id);
+
+            return $out;
+        }
         try {
             $client = self::client($c);
             $server = $client->initialize();
@@ -268,6 +288,15 @@ final class IntegrationService
             }
         }
         $set = ['config' => json_encode($cfg)];
+        $target = self::provider($c->provider)->target();
+        if ($target === 'property' && ! empty($data['property_id']) && $data['property_id'] !== ($cfg['property_id'] ?? null)) {
+            $cfg['property_id'] = PmsSyncService::assertTarget($this->ctx, $data['property_id']);
+            $set = ['config' => json_encode($cfg), 'approved_at' => null, 'approved_by' => null, 'last_preview' => null, 'status' => 'needs_review'];
+        }
+        if ($target === 'entity' && ! empty($data['entity_id']) && $data['entity_id'] !== ($cfg['entity_id'] ?? null)) {
+            $cfg['entity_id'] = FinanceSyncService::assertTarget($this->ctx, $data['entity_id']);
+            $set = ['config' => json_encode($cfg), 'approved_at' => null, 'approved_by' => null, 'last_preview' => null, 'status' => 'needs_review'];
+        }
         if (isset($data['sync_interval_hours'])) {
             $set['sync_interval_hours'] = max(1, min(720, (int) $data['sync_interval_hours']));
         }
@@ -279,10 +308,43 @@ final class IntegrationService
         return $this->connection($c->id);
     }
 
+    /** Finance: which Schedule C line each account feeds ({account_id: line}). */
+    public function setAccountMap(string $id, array $map): object
+    {
+        $c = $this->connection($id, 'write');
+        if ($c->provider !== 'invoices') {
+            throw new ApiError('validation_failed', 'Only bookkeeping connections have an account mapping.', 422);
+        }
+        $cfg = json_decode((string) $c->config, true) ?: [];
+        foreach ($map as $acct => $line) {
+            if (! isset($cfg['accounts'][$acct]) || ! in_array($line, FinanceSyncService::LINES, true)) {
+                throw new ApiError('validation_failed', 'Unknown account or Schedule C line. Run Preview to refresh the accounts.', 422);
+            }
+            $cfg['account_map'][$acct] = $line;
+        }
+        $this->update($c, ['config' => json_encode($cfg)]);
+        Audit::log('integration.account_map_updated', 'source_connection', $c->id, ['accounts' => count($map)], scopeId: $c->scope_id);
+
+        return $this->connection($c->id);
+    }
+
     public function approve(string $id): object
     {
         $c = $this->connection($id, 'write');
         $preview = json_decode((string) $c->last_preview, true);
+        if (self::provider($c->provider)->transport() === 'rest') {
+            if (empty($preview['ok'])) {
+                throw ApiError::conflict('Run a preview before approving.');
+            }
+            if ($c->provider === 'invoices') {
+                (new FinanceSyncService($this->ctx))->ensureEntity($c);
+                $c = $this->connection($c->id, 'write');
+            }
+            $this->update($c, ['approved_at' => now(), 'approved_by' => $this->ctx->user->id, 'status' => 'active', 'owner_membership_id' => $this->ctx->membership->id]);
+            Audit::log('integration.approved', 'source_connection', $c->id, ['provider' => $c->provider], scopeId: $c->scope_id);
+
+            return $this->connection($c->id);
+        }
         if (! $preview || ($preview['tool_map'] ?? null) !== json_decode((string) $c->tool_map, true)) {
             throw ApiError::conflict('Run a preview with the current tool mapping before approving.');
         }

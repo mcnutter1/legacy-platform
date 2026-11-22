@@ -70,17 +70,27 @@ class OAuthController extends Controller
     public function authorize(Request $r)
     {
         try {
-            [$client] = $this->validateAuthorizeRequest($r);
+            [$client, $redirect] = $this->validateAuthorizeRequest($r);
         } catch (ApiError $e) {
             return response()->view('errors.access-denied', ['reason' => $e->getMessage()], 400);
         }
+
+        return $this->consent($r, $client, $redirect);
+    }
+
+    /** Browsers apply CSP form-action to the post-submit redirect, so the registered client origin must be allowed. */
+    private function consent(Request $r, object $client, string $redirect, array $errors = [], int $status = 200)
+    {
+        $p = parse_url($redirect);
+        $r->attributes->set('csp_form_action', ($p['scheme'] ?? 'https').'://'.($p['host'] ?? '').(isset($p['port']) ? ':'.$p['port'] : ''));
         $memberships = Membership::with('workspace')->where('user_id', $r->user()->id)->where('status', 'active')->get();
 
-        return view('oauth.consent', [
+        return response()->view('oauth.consent', [
             'client' => $client, 'scopes' => array_intersect_key(OAuthService::SCOPES, array_flip($this->oauth->parseScopes($r->input('scope')))),
             'memberships' => $memberships, 'params' => $r->only(['client_id', 'redirect_uri', 'code_challenge', 'code_challenge_method', 'state', 'scope', 'resource', 'response_type']),
             'stepupFresh' => StepUp::isFresh(), 'stepupEnrolled' => (bool) $r->user()->totp_enabled_at,
-        ]);
+            'consentErrors' => $errors, 'selectedMembership' => $r->input('membership_id'), 'selectedScopes' => $r->has('scopes') ? (array) $r->input('scopes') : null,
+        ], $status);
     }
 
     public function approve(Request $r)
@@ -97,17 +107,17 @@ class OAuthController extends Controller
         if (! StepUp::isFresh()) {
             $code = (string) $r->input('totp');
             if (! $r->user()->totp_enabled_at || ! StepUp::verify($r->user(), $code)) {
-                return back()->withInput()->withErrors(['totp' => 'Enter a valid authenticator code to connect an app.']);
+                return $this->consent($r, $client, $redirect, ['That authenticator code did not match. Enter the current 6-digit code.'], 422);
             }
             StepUp::markVerified();
         }
         $m = Membership::where('user_id', $r->user()->id)->where('id', (string) $r->input('membership_id'))->where('status', 'active')->first();
         if (! $m) {
-            return back()->withErrors(['membership_id' => 'Choose a workspace.']);
+            return $this->consent($r, $client, $redirect, ['Choose a workspace.'], 422);
         }
         $granted = array_values(array_intersect($this->oauth->parseScopes($r->input('scope')), (array) $r->input('scopes', [])));
         if (! $granted) {
-            return back()->withErrors(['scopes' => 'Select at least one permission.']);
+            return $this->consent($r, $client, $redirect, ['Select at least one permission.'], 422);
         }
         $code = $this->oauth->issueCode($client, $m, $granted, $redirect, (string) $r->input('code_challenge'), $r->input('resource'));
 

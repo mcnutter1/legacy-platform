@@ -8,14 +8,14 @@
         @foreach($params as $k => $v)<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endforeach
         <label class="field"><span>Workspace</span>
             <select name="membership_id" required>
-                @foreach($memberships as $m)<option value="{{ $m->id }}">{{ $m->workspace->name }}</option>@endforeach
+                @foreach($memberships as $m)<option value="{{ $m->id }}" @selected($selectedMembership === $m->id)>{{ $m->workspace->name }}</option>@endforeach
             </select>
         </label>
         <fieldset class="space-y-2">
             <legend class="text-sm font-medium">Permissions</legend>
             @foreach($scopes as $key => $s)
                 <label class="flex items-start gap-3 rounded-lg border border-line p-3 text-sm">
-                    <input type="checkbox" name="scopes[]" value="{{ $key }}" checked class="mt-1">
+                    <input type="checkbox" name="scopes[]" value="{{ $key }}" @checked($selectedScopes === null || in_array($key, $selectedScopes, true)) class="mt-1">
                     <span><span class="font-medium">{{ $s['label'] }}</span><br><span class="text-muted">{{ $key }}{{ in_array('write', $s['actions']) ? ' · creates drafts or proposals for your approval' : ' · read-only' }}</span></span>
                 </label>
             @endforeach
@@ -27,9 +27,9 @@
                 <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Set up an authenticator in McNutt Legacy (Settings → Security) before connecting apps.</p>
             @endif
         @endunless
-        @if($errors->any())<p class="text-sm text-red-700" role="alert">{{ $errors->first() }}</p>@endif
+        @if($consentErrors)<p class="text-sm text-red-700" role="alert">{{ $consentErrors[0] }}</p>@endif
         <div class="flex gap-3">
-            <button class="btn-secondary flex-1" type="submit" name="decision" value="deny">Cancel</button>
+            <button class="btn-secondary flex-1" type="submit" name="decision" value="deny" formnovalidate>Cancel</button>
             <button class="btn-primary flex-1" type="submit" name="decision" value="allow" @if(!$stepupFresh && !$stepupEnrolled) disabled @endif>Allow</button>
         </div>
     </form>

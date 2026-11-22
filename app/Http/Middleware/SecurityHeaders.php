@@ -46,7 +46,7 @@ class SecurityHeaders
                 "frame-ancestors 'none'",
                 "base-uri 'none'",
                 "object-src 'none'",
-                "form-action 'self' ".$loginOrigin,
+                "form-action 'self' ".$loginOrigin.(($fa = $request->attributes->get('csp_form_action')) ? ' '.$fa : ''),
             ]));
         }
         if ($request->isSecure()) {

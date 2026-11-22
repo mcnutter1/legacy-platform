@@ -76,6 +76,18 @@ class OAuthMcpTest extends TestCase
         $this->postJson('/oauth/register', ['redirect_uris' => ['https://evil.example/cb']])->assertStatus(400);
     }
 
+    public function test_consent_errors_rerender_instead_of_redirecting_away(): void
+    {
+        $u = $this->makeUser('owner');
+        [, $m] = $this->makeWorkspace($u);
+        $u->forceFill(['totp_secret' => 'JBSWY3DPEHPK3PXP', 'totp_enabled_at' => now()])->save();
+        $client = $this->postJson('/oauth/register', ['redirect_uris' => [$this->redirect]])->json('client_id');
+        [, $challenge] = $this->pkce();
+        $params = ['client_id' => $client, 'redirect_uri' => $this->redirect, 'response_type' => 'code', 'code_challenge' => $challenge, 'code_challenge_method' => 'S256', 'scope' => 'wealth.read'];
+        $this->signIn($u, stepUp: false)->post('/oauth/authorize', $params + ['decision' => 'allow', 'membership_id' => $m->id, 'scopes' => ['wealth.read'], 'totp' => '000000'])
+            ->assertStatus(422)->assertSee('did not match')->assertSee('Allow');
+    }
+
     public function test_claude_registration_with_basic_client_auth(): void
     {
         $redirect = 'https://claude.ai/api/mcp/auth_callback';
@@ -89,6 +101,10 @@ class OAuthMcpTest extends TestCase
         [$verifier, $challenge] = $this->pkce();
         $params = ['client_id' => $reg['client_id'], 'redirect_uri' => $redirect, 'response_type' => 'code', 'code_challenge' => $challenge, 'code_challenge_method' => 'S256',
             'scope' => 'wealth.read', 'resource' => url('/mcp')];
+        $page = $this->signIn($u)->get('/oauth/authorize?'.http_build_query($params))->assertOk();
+        // Without the client origin in form-action, browsers silently block the redirect after "Allow".
+        $this->assertStringContainsString("form-action 'self'", (string) $page->headers->get('Content-Security-Policy'));
+        $this->assertStringContainsString('https://claude.ai', (string) $page->headers->get('Content-Security-Policy'));
         $res = $this->signIn($u)->post('/oauth/authorize', $params + ['decision' => 'allow', 'membership_id' => $m->id, 'scopes' => ['wealth.read']]);
         parse_str((string) parse_url($res->headers->get('Location'), PHP_URL_QUERY), $q);
         $body = ['grant_type' => 'authorization_code', 'code' => $q['code'], 'redirect_uri' => $redirect, 'code_verifier' => $verifier];

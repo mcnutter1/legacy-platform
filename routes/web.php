@@ -161,6 +161,9 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::post('/integrations/{connection}/disconnect', [IntegrationController::class, 'disconnect'])->where('connection', $ulid);
         Route::get('/accounts/{account}/sources', [IntegrationController::class, 'accountSources'])->where('account', $ulid);
         Route::post('/accounts/{account}/merge', [IntegrationController::class, 'merge'])->where('account', $ulid);
+        Route::post('/accounts/{account}/visibility', [IntegrationController::class, 'visibility'])->where('account', $ulid);
+        Route::post('/accounts/{account}/not-duplicate', [IntegrationController::class, 'notDuplicate'])->where('account', $ulid);
+        Route::get('/account-duplicates', [IntegrationController::class, 'duplicates']);
         Route::post('/accounts/{account}/authority', [IntegrationController::class, 'authority'])->where('account', $ulid);
         Route::post('/source-conflicts/{conflict}/resolve', [IntegrationController::class, 'resolveConflict'])->where('conflict', $ulid);
 

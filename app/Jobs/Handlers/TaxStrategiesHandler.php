@@ -28,7 +28,7 @@ class TaxStrategiesHandler implements JobHandler
         $input = (new TaxInputBuilder($ctx))->build($p['tax_unit_id']);
         $pretax = '0';
         if ($ctx->canAny('ledger')) {
-            foreach ($ctx->constrain(DB::table('accounts'), 'ledger', 'read')->whereIn('kind', ['ira', 'sep_ira'])->whereNull('archived_at')->get() as $a) {
+            foreach ($ctx->constrain(DB::table('accounts'), 'ledger', 'read')->whereIn('kind', ['ira', 'sep_ira'])->whereNull('archived_at')->where('visibility', 'visible')->get() as $a) {
                 [$v] = app(NetWorthService::class)->accountValue($a->id, now()->toDateString());
                 $pretax = bcadd($pretax, $v ?? '0', 4);
             }

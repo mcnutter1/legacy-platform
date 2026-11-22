@@ -512,6 +512,8 @@ export interface Accounts {
   liquidity?: 'daily' | 't_plus' | 'monthly' | 'quarterly' | 'restricted' | 'illiquid' | null;
   restrictions?: string | null;
   is_liability?: boolean | null;
+  visibility?: 'visible' | 'hidden' | 'ignored' | null;
+  visibility_reason?: string | null;
 }
 
 export interface Transactions {

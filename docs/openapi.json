@@ -675,6 +675,32 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/account-duplicates": {
+            "get": {
+                "operationId": "get_workspaces_workspace_account_duplicates",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/accounts/{account}/authority": {
             "post": {
                 "operationId": "post_workspaces_workspace_accounts_account_authority",
@@ -749,6 +775,43 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/accounts/{account}/not-duplicate": {
+            "post": {
+                "operationId": "post_workspaces_workspace_accounts_account_not_duplicate",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/accounts/{account}/sources": {
             "get": {
                 "operationId": "get_workspaces_workspace_accounts_account_sources",
@@ -764,6 +827,43 @@
                     }
                 },
                 "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/accounts/{account}/visibility": {
+            "post": {
+                "operationId": "post_workspaces_workspace_accounts_account_visibility",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
                     {
                         "name": "workspace",
                         "in": "path",
@@ -6494,6 +6594,19 @@
                     },
                     "is_liability": {
                         "type": "boolean"
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "enum": [
+                            "visible",
+                            "hidden",
+                            "ignored"
+                        ],
+                        "readOnly": true
+                    },
+                    "visibility_reason": {
+                        "type": "string",
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -13951,7 +14064,8 @@
                 "kind",
                 "tax_bucket",
                 "owner_person_id",
-                "status"
+                "status",
+                "visibility"
             ],
             "readonly": false,
             "creatable": true,
@@ -14160,6 +14274,30 @@
                     "type": "b",
                     "required": false,
                     "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "visibility",
+                    "type": "enum",
+                    "required": false,
+                    "readonly": true,
+                    "values": [
+                        "visible",
+                        "hidden",
+                        "ignored"
+                    ],
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "visibility_reason",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
                     "values": null,
                     "ref": null,
                     "poly_type_field": null,

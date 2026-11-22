@@ -123,7 +123,7 @@ final class McpServer
     private function accounts(int $limit): array
     {
         $nw = app(NetWorthService::class);
-        $rows = $this->ctx->constrain(DB::table('accounts'), 'ledger')->whereNull('archived_at')->where('status', 'open')->orderBy('name')->limit(min(50, $limit))->get();
+        $rows = $this->ctx->constrain(DB::table('accounts'), 'ledger')->whereNull('archived_at')->where('status', 'open')->where('visibility', 'visible')->orderBy('name')->limit(min(50, $limit))->get();
 
         return ['accounts' => $rows->map(function ($a) use ($nw) {
             [$v, $m, $d] = $nw->accountValue($a->id, now()->toDateString());

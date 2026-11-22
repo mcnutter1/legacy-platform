@@ -44,7 +44,7 @@ final class PortfolioService
     {
         $asOf ??= now()->toDateString();
         $q = DB::table('holdings as h')->join('accounts as a', 'a.id', '=', 'h.account_id')->leftJoin('instruments as i', 'i.id', '=', 'h.instrument_id')
-            ->whereNull('h.archived_at')->where('h.as_of', '<=', $asOf);
+            ->whereNull('h.archived_at')->whereNull('a.archived_at')->where('a.visibility', 'visible')->where('h.as_of', '<=', $asOf);
         $ctx->constrain($q, 'portfolio', 'read', null, 'h');
         $rows = $q->select('h.*', 'a.name as account_name', 'a.tax_bucket', 'a.kind as account_kind', 'i.symbol', 'i.name as instrument_name', 'i.asset_class',
             'i.sector', 'i.issuer', 'i.currency as instrument_currency', 'i.last_price', 'i.last_price_on')->orderByDesc('h.as_of')->get();

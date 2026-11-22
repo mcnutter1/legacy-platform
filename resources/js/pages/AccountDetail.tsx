@@ -5,6 +5,7 @@ import { useMetaFor, ResourceForm, ResourceSection } from '../components/resourc
 import { Card, Dialog, KeyValue, Notice, PageHeader, Query, StatusBadge, Tabs } from '../components/ui';
 import { humanize, pct } from '../lib/format';
 import { AccountSources } from '../components/sourcesPanel';
+import { DuplicatesPanel, VisibilityButton, VisibilityNotice } from '../components/accountCuration';
 import { TitlePanel } from '../components/title';
 import { recordSources, SourceIcons } from '../components/sources';
 
@@ -23,11 +24,12 @@ export default function AccountDetail() {
         <div className="space-y-6">
           <PageHeader eyebrow={`${humanize(String(a.kind))} · ${a.institution ?? ''}`} title={String(a.name)}
             description={<span>Tax bucket: {humanize(String(a.tax_bucket))} · Liquidity: {humanize(String(a.liquidity))} {a.mask ? `· ••${a.mask}` : ''}</span>}
-            actions={<><SourceIcons sources={recordSources(a)} size={22} /><StatusBadge status={String(a.status)} /><button className="btn-secondary btn-sm" onClick={() => setEdit(true)}>Edit</button></>} />
+            actions={<><SourceIcons sources={recordSources(a)} size={22} /><StatusBadge status={String(a.status)} /><VisibilityButton account={a} /><button className="btn-secondary btn-sm" onClick={() => setEdit(true)}>Edit</button></>} />
+          <VisibilityNotice account={a} />
           <Tabs value={tab} onChange={setTab} tabs={[{ id: 'activity', label: 'Transactions' }, { id: 'balances', label: 'Balances' }, { id: 'holdings', label: 'Holdings' },
-            { id: 'sources', label: 'Sources' },
+            { id: 'sources', label: 'Sources & duplicates' },
             { id: 'lots', label: 'Tax lots' }, { id: 'performance', label: 'Performance' }, { id: 'beneficiaries', label: 'Beneficiaries' }, { id: 'ownership', label: 'Ownership' }]} />
-          {tab === 'sources' && <AccountSources accountId={id} />}
+          {tab === 'sources' && <><AccountSources accountId={id} /><DuplicatesPanel accountId={id} /></>}
           {tab === 'activity' && <ResourceSection type="transactions" filter={{ account_id: id }} />}
           {tab === 'balances' && <ResourceSection type="balance_snapshots" filter={{ account_id: id }} description="Statement balances are the reconciliation anchor for imports." />}
           {tab === 'holdings' && <ResourceSection type="holdings" filter={{ account_id: id }} />}

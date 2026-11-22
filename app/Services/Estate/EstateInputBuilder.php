@@ -66,7 +66,7 @@ final class EstateInputBuilder
             }
         }
         if ($this->ctx->canAny('ledger')) {
-            foreach ($this->ctx->constrain(DB::table('accounts'), 'ledger', 'read')->whereNull('archived_at')->where('status', 'open')->where('is_liability', false)->get() as $a) {
+            foreach ($this->ctx->constrain(DB::table('accounts'), 'ledger', 'read')->whereNull('archived_at')->where('status', 'open')->where('visibility', 'visible')->where('is_liability', false)->get() as $a) {
                 [$v] = $nw->accountValue($a->id, $today);
                 $push('account', $a->id, $a->name, 'account', $v, $a, ['retirement' => in_array($a->tax_bucket, ['pretax', 'roth'], true), 'liquid' => $a->liquidity === 'daily',
                     'basis' => (string) (DB::table('lots')->where('account_id', $a->id)->whereNull('archived_at')->sum('cost_basis') ?: '0')]);

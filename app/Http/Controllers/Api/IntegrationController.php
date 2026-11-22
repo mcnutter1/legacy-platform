@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\AccountCurationService;
 use App\Services\Integrations\FinanceSyncService;
 use App\Services\Integrations\IntegrationService;
 use App\Services\Integrations\SyncService;
@@ -155,6 +156,27 @@ class IntegrationController extends ApiController
         $d = $this->validated($r, ['into_account_id' => 'required|string']);
 
         return $this->ok((new SyncService($this->ctx()))->merge($account, $d['into_account_id']));
+    }
+
+    public function visibility(Request $r, string $account): JsonResponse
+    {
+        $d = $this->validated($r, ['visibility' => 'required|in:visible,hidden,ignored', 'reason' => 'nullable|in:'.implode(',', AccountCurationService::REASONS)]);
+
+        return $this->ok((new AccountCurationService($this->ctx()))->setVisibility($account, $d['visibility'], $d['reason'] ?? null));
+    }
+
+    public function duplicates(Request $r): JsonResponse
+    {
+        $for = $r->query('account_id');
+
+        return $this->ok((new AccountCurationService($this->ctx()))->duplicates(is_string($for) && $for !== '' ? $for : null));
+    }
+
+    public function notDuplicate(Request $r, string $account): JsonResponse
+    {
+        $d = $this->validated($r, ['other_account_id' => 'required|string|max:26']);
+
+        return $this->ok((new AccountCurationService($this->ctx()))->notDuplicate($account, $d['other_account_id']));
     }
 
     public function authority(Request $r, string $account): JsonResponse

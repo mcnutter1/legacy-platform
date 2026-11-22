@@ -117,7 +117,7 @@ final class SyncService
     public function plan(object $c, array $snap): array
     {
         $links = DB::table('external_links')->where('connection_id', $c->id)->where('entity_type', 'account')->whereNull('archived_at')->pluck('entity_id', 'external_id');
-        $candidates = $this->ctx->constrain(DB::table('accounts'), 'ledger', 'write')->whereNull('archived_at')->get()->keyBy('id');
+        $candidates = $this->ctx->constrain(DB::table('accounts'), 'ledger', 'write')->whereNull('archived_at')->where('visibility', '!=', 'ignored')->get()->keyBy('id');
         $claimed = $links->values()->flip();
         $latest = DB::table('balance_snapshots')->whereIn('account_id', $candidates->keys())->whereNull('archived_at')->orderByDesc('as_of')->get()->groupBy('account_id')->map(fn ($g) => $g->first()->balance);
         $linkCount = DB::table('external_links')->whereIn('entity_id', $candidates->keys())->where('entity_type', 'account')->whereNull('archived_at')
@@ -126,11 +126,12 @@ final class SyncService
         foreach ($snap['accounts'] as $ext => $a) {
             $row = ['external_id' => (string) $ext, 'name' => $a['name'], 'institution' => $a['institution'], 'kind' => $a['kind'], 'mask' => $a['mask'],
                 'balance' => $a['balance'], 'currency' => $a['currency'], 'holdings' => count($a['holdings']), 'transactions' => count($a['transactions']),
-                'action' => 'new', 'account_id' => null, 'candidate' => null, 'authoritative' => true];
+                'action' => 'new', 'account_id' => null, 'candidate' => null, 'authoritative' => true, 'visibility' => 'visible'];
             $linked = $links[(string) $ext] ?? null;
             if ($linked && ($acct = $candidates[$linked] ?? DB::table('accounts')->find($linked))) {
                 $row['action'] = 'linked';
                 $row['account_id'] = $acct->id;
+                $row['visibility'] = $acct->visibility;
                 $row['authoritative'] = $acct->connection_id === $c->id || ($acct->connection_id === null && (int) ($linkCount[$acct->id] ?? 0) <= 1);
                 $out[] = $row;
 
@@ -171,7 +172,8 @@ final class SyncService
         $summary = ['accounts' => $plan, 'issues' => $snap['issues'], 'tool_map' => $snap['tool_map'], 'fetched_at' => $snap['fetched_at'],
             'totals' => ['accounts' => count($plan), 'holdings' => array_sum(array_column($plan, 'holdings')), 'transactions' => array_sum(array_column($plan, 'transactions')),
                 'new' => count(array_filter($plan, fn ($r) => $r['action'] === 'new')), 'link' => count(array_filter($plan, fn ($r) => in_array($r['action'], ['link', 'linked'], true))),
-                'possible_duplicate' => count(array_filter($plan, fn ($r) => $r['action'] === 'possible_duplicate'))]];
+                'possible_duplicate' => count(array_filter($plan, fn ($r) => $r['action'] === 'possible_duplicate')),
+                'excluded' => count(array_filter($plan, fn ($r) => $r['visibility'] !== 'visible'))]];
         DB::table('source_connections')->where('id', $c->id)->update(['last_preview' => json_encode($summary), 'last_sync_at' => now(), 'last_error' => null,
             'status' => $c->approved_at ? $c->status : 'needs_review', 'updated_at' => now()]);
 
@@ -186,7 +188,7 @@ final class SyncService
         $snap = $this->fetch($c);
         $p = IntegrationService::provider($c->provider);
         $today = now()->toDateString();
-        $stats = ['accounts_created' => 0, 'accounts_linked' => 0, 'balances' => 0, 'holdings' => 0, 'observed_only' => 0, 'possible_duplicates' => 0, 'skipped_no_access' => 0];
+        $stats = ['accounts_created' => 0, 'accounts_linked' => 0, 'balances' => 0, 'holdings' => 0, 'observed_only' => 0, 'possible_duplicates' => 0, 'skipped_no_access' => 0, 'ignored' => 0];
         $txRows = [];
         $touched = DB::transaction(function () use ($c, $snap, $p, $today, &$stats, &$txRows) {
             $touched = [];
@@ -217,6 +219,11 @@ final class SyncService
                     $account->connection_id = $c->id;
                 }
                 $this->link($c, 'account', $account, $a, $row['action'] === 'linked' ? null : ($row['action'] === 'link' ? 'auto:'.implode(',', $row['candidate']['reasons']) : 'created'));
+                if ($account->visibility === 'ignored') {
+                    $stats['ignored']++;
+
+                    continue;
+                }
                 $touched[] = $account->id;
                 if ($account->connection_id !== $c->id) {
                     $stats['observed_only']++;
@@ -427,7 +434,7 @@ final class SyncService
             'status' => 'open', 'last_seen_at' => now(), 'created_by' => $this->ctx->user->id, 'created_at' => now(), 'updated_at' => now(), 'edit_version' => 1]);
     }
 
-    private function score(array $a, object $cand, ?string $latestBalance, object $c): array
+    public function score(array $a, object $cand, ?string $latestBalance, object $c): array
     {
         $score = 0;
         $why = [];

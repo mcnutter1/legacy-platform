@@ -61,7 +61,7 @@ final class PlanInputBuilder
         $nw = app(NetWorthService::class);
         $accounts = [];
         if ($this->ctx->canAny('ledger')) {
-            $rows = $this->ctx->constrain(DB::table('accounts'), 'ledger', 'read')->whereNull('archived_at')->where('status', 'open')->where('is_liability', false)
+            $rows = $this->ctx->constrain(DB::table('accounts'), 'ledger', 'read')->whereNull('archived_at')->where('status', 'open')->where('visibility', 'visible')->where('is_liability', false)
                 ->where(fn ($q) => $q->whereIn('owner_person_id', $participants)->orWhereNull('owner_person_id'))->get();
             foreach ($rows as $acc) {
                 $bucket = self::BUCKET[$acc->kind] ?? ($acc->tax_bucket === 'pretax' ? 'pretax' : ($acc->tax_bucket === 'roth' ? 'roth' : 'taxable'));

@@ -45,7 +45,7 @@ final class NetWorthService
 
         // Accounts (assets and mirrored liabilities)
         if ($ctx->canAny('ledger') || $ctx->canAny('portfolio')) {
-            $accounts = $ctx->constrain(DB::table('accounts')->whereNull('archived_at')->where('status', '!=', 'closed'), 'ledger', 'read');
+            $accounts = $ctx->constrain(DB::table('accounts')->whereNull('archived_at')->where('status', '!=', 'closed')->where('visibility', 'visible'), 'ledger', 'read');
             $linkedLiabilityAccounts = DB::table('liabilities')->where('workspace_id', $ctx->workspace->id)->whereNotNull('account_id')->whereNull('archived_at')->pluck('account_id')->all();
             foreach ($accounts->get() as $a) {
                 [$val, $method, $vdate] = $this->accountValue($a->id, $asOf);

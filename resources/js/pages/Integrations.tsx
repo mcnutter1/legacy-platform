@@ -25,7 +25,8 @@ interface RestPreview {
 }
 interface MappedAccount { id: string; code: string; name: string; type: string; subtype: string | null; line: string }
 interface PlanRow { external_id: string; name: string; institution: string | null; kind: string; mask: string | null; balance: string | null; currency: string; holdings: number; transactions: number;
-  action: 'new' | 'link' | 'linked' | 'possible_duplicate'; account_id: string | null; candidate: { id: string; name: string; score: number; reasons: string[] } | null; authoritative: boolean }
+  action: 'new' | 'link' | 'linked' | 'possible_duplicate'; account_id: string | null; candidate: { id: string; name: string; score: number; reasons: string[] } | null; authoritative: boolean;
+  visibility?: 'visible' | 'hidden' | 'ignored' }
 interface McpPreview { accounts: PlanRow[]; issues: string[]; tool_map: Record<string, string | null>; fetched_at: string; totals: Record<string, number>; ok?: undefined }
 interface Connection {
   id: string; scope_id: string; provider: string; label: string; mode: string; status: string; auth_kind: string | null; server_url: string | null; authorized: boolean;
@@ -352,7 +353,7 @@ function PreviewTable({ p, stale }: { p: McpPreview; stale: boolean }) {
                   <Link className="link" to={path(`accounts/${r.candidate.id}`)}>{r.candidate.name}</Link> ({r.candidate.reasons.map(humanize).join(', ')})</span>}
                 {r.action === 'linked' && r.account_id && <Link className="link block text-xs" to={path(`accounts/${r.account_id}`)}>Open account</Link>}
               </td>
-              <td className="text-xs">{r.authoritative ? 'Balances, holdings, transactions' : 'Compared only (another source is authoritative)'}</td>
+              <td className="text-xs">{r.visibility === 'ignored' ? 'Nothing (account ignored)' : r.visibility === 'hidden' ? 'Synced, not counted (account hidden)' : r.authoritative ? 'Balances, holdings, transactions' : 'Compared only (another source is authoritative)'}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -364,7 +365,7 @@ function PreviewTable({ p, stale }: { p: McpPreview; stale: boolean }) {
 
 function SyncStats({ s }: { s: Record<string, unknown> }) {
   const { path } = useWorkspace();
-  const keys = ['accounts_created', 'accounts_linked', 'balances', 'holdings', 'observed_only', 'possible_duplicates', 'transactions_staged', 'open_conflicts'];
+  const keys = ['accounts_created', 'accounts_linked', 'balances', 'holdings', 'observed_only', 'ignored', 'possible_duplicates', 'transactions_staged', 'open_conflicts'];
   return (
     <div className="space-y-1 text-sm">
       <p className="text-xs text-muted">{keys.filter((k) => Number(s[k] ?? 0) > 0).map((k) => `${humanize(k)}: ${num(Number(s[k]), 0)}`).join(' · ') || 'No changes in the last sync.'}</p>

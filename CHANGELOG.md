@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — hide, ignore and de-duplicate accounts
+
+### Implemented
+- Accounts can be **hidden** (still synced, left out of net worth, investments, planning, estate, tax strategies, MCP and
+  the default accounts list) or **ignored** (additionally, no source writes balances, holdings or transactions to it and
+  sync never re-creates it). Reason recorded and audited; restore at any time.
+- Duplicate finder (Accounts › Find duplicates, and per account under Sources & duplicates): scores existing account
+  pairs on mask, institution, name, type and balance; merge either way, mark "not duplicates" (remembered), or — when one
+  source reports both, e.g. an aggregate — ignore one.
+
 ## Unreleased — schedules
 
 ### Fixed

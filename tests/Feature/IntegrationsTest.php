@@ -215,6 +215,50 @@ class IntegrationsTest extends TestCase
         $this->assertSame(1, DB::table('balance_snapshots')->count());
     }
 
+    public function test_hidden_and_ignored_accounts_are_left_out_and_duplicates_can_be_found_dismissed_and_merged(): void
+    {
+        $u = $this->makeUser('owner');
+        [$ws, , $joint] = $this->makeWorkspace($u);
+        $id = $this->snowballConnection($ws, $u, $joint->id);
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "integrations/{$id}/sync"))->assertStatus(202);
+        $this->work();
+        $synced = DB::table('accounts')->where('connection_id', $id)->value('id');
+        $nw = fn () => (float) $this->signIn($u)->getJson($this->wsUrl($ws, 'net-worth'))->assertOk()->json('data.net_worth');
+        $this->assertGreaterThan(0, $nw());
+
+        // Hide: still synced, not counted, not listed by default.
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$synced}/visibility"), ['visibility' => 'hidden', 'reason' => 'aggregate'])->assertOk();
+        $this->assertEquals(0, $nw());
+        $this->assertCount(0, $this->signIn($u)->getJson($this->wsUrl($ws, 'r/accounts?filter[visibility]=visible'))->json('data'));
+        $this->snowball['portfolios']['portfolios'][0]['value'] = 101000;
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "integrations/{$id}/sync"))->assertStatus(202);
+        $this->work();
+        $this->assertSame(1, DB::table('balance_snapshots')->where('account_id', $synced)->where('balance', 101000)->count(), 'hidden accounts keep syncing');
+
+        // Ignore: sync no longer writes to it.
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$synced}/visibility"), ['visibility' => 'ignored', 'reason' => 'not_ours'])->assertOk();
+        $this->snowball['portfolios']['portfolios'][0]['value'] = 999;
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "integrations/{$id}/sync"))->assertStatus(202);
+        $this->work();
+        $this->assertSame(0, DB::table('balance_snapshots')->where('account_id', $synced)->where('balance', 999)->count());
+        $this->assertSame(1, DB::table('accounts')->count(), 'an ignored account is not re-created');
+        $this->assertSame(1, json_decode(DB::table('source_connections')->where('id', $id)->value('last_sync_stats'), true)['ignored']);
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$synced}/visibility"), ['visibility' => 'visible'])->assertOk();
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$synced}/visibility"), ['visibility' => 'bogus'])->assertStatus(422);
+
+        // A manually entered copy is suggested as a duplicate; dismiss, then merge.
+        $manual = $this->signIn($u)->send('POST', $this->wsUrl($ws, 'r/accounts'), ['scope_id' => $joint->id, 'name' => 'Example Brokerage', 'institution' => 'Example Securities', 'kind' => 'brokerage'])
+            ->assertCreated()->json('data.id');
+        $pairs = $this->signIn($u)->getJson($this->wsUrl($ws, 'account-duplicates'))->assertOk()->json('data');
+        $this->assertCount(1, $pairs);
+        $this->assertSame([false, ['institution', 'name', 'type']], [$pairs[0]['same_source'], $pairs[0]['reasons']]);
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$manual}/not-duplicate"), ['other_account_id' => $synced])->assertOk();
+        $this->assertCount(0, $this->signIn($u)->getJson($this->wsUrl($ws, 'account-duplicates'))->json('data'));
+        $this->assertCount(0, $this->signIn($u)->getJson($this->wsUrl($ws, "account-duplicates?account_id={$manual}"))->json('data'));
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$manual}/merge"), ['into_account_id' => $synced])->assertOk();
+        $this->assertNotNull(DB::table('accounts')->where('id', $manual)->value('archived_at'));
+    }
+
     public function test_monarch_oauth_transactions_and_overlap_with_snowball_is_deduped_and_conflicts_flagged(): void
     {
         $u = $this->makeUser('owner');

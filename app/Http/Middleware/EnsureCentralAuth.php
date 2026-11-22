@@ -19,7 +19,8 @@ class EnsureCentralAuth
         $user = $this->session->user();
         if (! $user) {
             if ($request->isMethod('GET') && ! $json) {
-                $request->session()->put('url.intended', '/'.ltrim($request->path(), '/'));
+                // Keep the query so an OAuth return (code/state) survives a sign-in round trip.
+                $request->session()->put('url.intended', '/'.ltrim($request->path(), '/').($request->getQueryString() !== null ? '?'.mb_substr($request->getQueryString(), 0, 2048) : ''));
             }
 
             return $json ? response()->json(['error' => ['code' => 'unauthenticated', 'message' => 'Sign in required.']], 401) : redirect('/auth/login');

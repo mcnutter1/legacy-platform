@@ -357,7 +357,7 @@ prune_releases() {
 
 summary() {
   local missing=()
-  for k in AUTH_APP_ID AUTH_APP_SECRET NOTIFICATIONS_API_TOKEN LEGACY_WORKSPACE_CREATORS; do [ -n "$(env_get "$k")" ] || missing+=("$k"); done
+  for k in AUTH_APP_ID AUTH_APP_SECRET NOTIFICATIONS_API_TOKEN; do [ -n "$(env_get "$k")" ] || missing+=("$k"); done
   echo
   echo "=================================================================="
   echo " McNutt Legacy release ${RELEASE}"

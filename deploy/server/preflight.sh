@@ -62,7 +62,7 @@ else note "${DOMAIN} -> ${DNS_IPS} but server public IP is ${PUBLIC_IP}"; fi
 
 echo "== Configuration"
 if [ -f "$ENV_FILE" ]; then
-  for k in AUTH_APP_ID AUTH_APP_SECRET NOTIFICATIONS_API_TOKEN LEGACY_WORKSPACE_CREATORS; do [ -n "$(env_get "$k")" ] && pass "$k set" || note "$k not set"; done
+  for k in AUTH_APP_ID AUTH_APP_SECRET NOTIFICATIONS_API_TOKEN; do [ -n "$(env_get "$k")" ] && pass "$k set" || note "$k not set"; done
 fi
 if [ -L "$CURRENT_LINK" ]; then pass "current release $(basename "$(readlink -f "$CURRENT_LINK")")"; else will "first release"; fi
 

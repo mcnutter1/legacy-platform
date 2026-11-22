@@ -32,7 +32,8 @@ class PreflightCommand extends Command
         $check('Database sessions', config('session.driver') === 'database');
         $check('Auth driver is McNutt Cloud in production', ! $prod || config('legacy.auth.driver') === 'mcnutt');
         $check('AUTH_APP_ID / AUTH_APP_SECRET', (bool) config('legacy.auth.app_id') && (bool) config('legacy.auth.app_secret'), 'register the app in McNutt Cloud', ! $prod);
-        $check('Workspace creators configured', count(config('legacy.auth.workspace_creators')) > 0, 'set LEGACY_WORKSPACE_CREATORS to your McNutt Cloud uid', true);
+        $check('Workspace creators configured', count(config('legacy.auth.workspace_creators')) > 0 || count(config('legacy.auth.creator_roles')) > 0,
+            'set LEGACY_CREATOR_ROLES (McNutt Cloud roles) or LEGACY_WORKSPACE_CREATORS (uids)', true);
         $this->info('Database');
         try {
             DB::select('select 1');

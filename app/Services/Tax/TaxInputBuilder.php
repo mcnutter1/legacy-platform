@@ -130,7 +130,7 @@ final class TaxInputBuilder
                 $income['wages'][] = ['person' => $pid, 'employer' => (string) ($emp->employer_name ?? ''), 'box1' => $proj('federal_taxable_wages') !== '0' ? $proj('federal_taxable_wages') : $proj('gross'),
                     'box3' => $proj('ss_wages') !== '0' ? $proj('ss_wages') : $proj('gross'), 'box5' => $proj('medicare_wages') !== '0' ? $proj('medicare_wages') : $proj('gross'),
                     'box16_nj' => $proj('state_wages') !== '0' ? $proj('state_wages') : null, 'fed_wh' => $proj('federal_withholding'), 'nj_wh' => $proj('nj_withholding'),
-                    'ss_tax' => $proj('social_security'), 'medicare_tax' => $proj('medicare'), 'box12' => ['D' => $proj('pretax_401k')],
+                    'ss_tax' => $proj('social_security'), 'medicare_tax' => Dec::add($proj('medicare'), $proj('additional_medicare')), 'box12' => ['D' => $proj('pretax_401k')],
                     'facts' => $rows->pluck('id')->map(fn ($i) => 'payroll_snapshot:'.$i)->all()];
                 if ($factor !== '1') {
                     $this->assumptions[] = 'Wages for '.($emp->employer_name ?? 'an employer').' projected from payroll YTD through '.$latest->pay_date." (×{$factor}); bonuses/vests not yet paid are excluded unless entered as inputs.";

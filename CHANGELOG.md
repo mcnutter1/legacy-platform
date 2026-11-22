@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — paystub lines
+
+### Implemented
+- Paystub fields `additional_medicare` (0.9% surtax), `post_tax_deductions` and `net_adjustments` (after-tax
+  reimbursements). The net-pay check counts them; projected W-2 Medicare withholding (box 6) is Medicare + Additional
+  Medicare. The "YTD less than current" check no longer applies to net adjustments.
+
 ## Unreleased — combined accounts with several sources
 
 ### Implemented

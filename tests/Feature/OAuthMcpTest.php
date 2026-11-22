@@ -161,9 +161,11 @@ class OAuthMcpTest extends TestCase
             'values' => ['pay_date' => '2026-10-30', 'gross' => ['current' => '5000.00', 'ytd' => '105000.00']]]])->json('result.structuredContent');
         $this->assertSame('awaiting_review', $viaOld['status']);
         $withAfterTax = $call(['employment_id' => $emp, 'idempotency_key' => 'after-tax-lines', 'values' => ['pay_date' => '2026-10-16', 'gross' => ['current' => '1000'],
-            'federal_withholding' => ['current' => '100'], 'post_tax_deductions' => ['current' => '40'], 'net_adjustments' => ['current' => '15'], 'net' => ['current' => '875']]])
+            'federal_withholding' => ['current' => '100'], 'medicare' => ['current' => '14.50'], 'additional_medicare' => ['current' => '9.00'],
+            'post_tax_deductions' => ['current' => '40'], 'net_adjustments' => ['current' => '15', 'ytd' => '0'], 'net' => ['current' => '851.50']]])
             ->json('result.structuredContent');
-        $this->assertTrue(collect($withAfterTax['checks'])->firstWhere('check', 'net_components')['passed'], 'after-tax deductions and reimbursements reconcile net pay');
+        $this->assertTrue(collect($withAfterTax['checks'])->firstWhere('check', 'net_components')['passed'], 'surtax, after-tax deductions and reimbursements reconcile net pay');
+        $this->assertNull(collect($withAfterTax['checks'])->firstWhere('check', 'net_adjustments_ytd_lt_current'));
         $link = $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'start_paystub_intake', 'arguments' => ['employment_id' => $emp, 'idempotency_key' => 'old-tool-link']])
             ->json('result.structuredContent');
         $this->assertStringContainsString('submit_paystub_values', $link['assistant_hint']);

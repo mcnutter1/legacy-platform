@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 final class PayrollService
 {
     public const AMOUNT_FIELDS = ['gross', 'net', 'federal_taxable_wages', 'state_wages', 'ss_wages', 'medicare_wages', 'federal_withholding', 'social_security',
-        'medicare', 'nj_withholding', 'nj_sdi', 'nj_fli', 'nj_ui', 'pretax_401k', 'roth_401k', 'hsa', 'fsa', 'medical_premium', 'dental', 'vision',
+        'medicare', 'additional_medicare', 'nj_withholding', 'nj_sdi', 'nj_fli', 'nj_ui', 'pretax_401k', 'roth_401k', 'hsa', 'fsa', 'medical_premium', 'dental', 'vision',
         'espp', 'rsu_income', 'bonus', 'deferred_comp', 'post_tax_deductions', 'net_adjustments'];
 
     public function approveExtraction(AccessContext $ctx, string $extractionId, array $data): array
@@ -116,7 +116,8 @@ final class PayrollService
             }
         }
         foreach ($ytd as $k => $v) {
-            if (isset($current[$k]) && Dec::cmp($v, $current[$k]) < 0) {
+            // Net adjustments (reimbursements, reversals) are not a running total on many stubs.
+            if ($k !== 'net_adjustments' && isset($current[$k]) && Dec::cmp($v, $current[$k]) < 0) {
                 $out[] = ['check' => "{$k}_ytd_lt_current", 'passed' => false, 'blocking' => true, 'message' => "YTD {$k} is less than the current amount."];
             }
         }

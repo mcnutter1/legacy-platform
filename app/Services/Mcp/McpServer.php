@@ -73,6 +73,10 @@ final class McpServer
             if ($t['scope'] !== null && ! in_array($t['scope'], $this->scopes, true)) {
                 continue;
             }
+            // An empty PHP array encodes as JSON [], which strict MCP clients reject (and then drop every tool).
+            if (($t['inputSchema']['properties'] ?? null) === []) {
+                $t['inputSchema']['properties'] = new \stdClass;
+            }
             $out[] = ['name' => $t['name'], 'title' => $t['title'], 'description' => $t['description'], 'inputSchema' => $t['inputSchema'],
                 'annotations' => ['readOnlyHint' => $t['readOnly'], 'destructiveHint' => false, 'idempotentHint' => $t['readOnly'], 'openWorldHint' => false]];
         }

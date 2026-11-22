@@ -130,6 +130,18 @@ class OAuthMcpTest extends TestCase
         $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'get_tax_estimate', 'arguments' => ['tax_year' => 2025]])->assertJsonPath('error.code', -32602);
     }
 
+    public function test_every_tool_schema_is_a_json_object_schema(): void
+    {
+        [$tokens] = $this->connect(array_keys(\App\Services\Mcp\OAuthService::SCOPES));
+        $raw = $this->rpc($tokens['access_token'], 'tools/list')->assertOk()->getContent();
+        // Strict clients (Claude) discard the whole list if any inputSchema.properties is an array.
+        foreach (json_decode($raw)->result->tools as $t) {
+            $this->assertSame('object', $t->inputSchema->type, $t->name);
+            $this->assertIsObject($t->inputSchema->properties, $t->name);
+        }
+        $this->assertStringNotContainsString('"properties":[]', $raw);
+    }
+
     public function test_refresh_tokens_rotate_and_reuse_revokes_the_family(): void
     {
         [$tokens, $client] = $this->connect(['wealth.read']);

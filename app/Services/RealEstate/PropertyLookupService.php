@@ -54,7 +54,7 @@ final class PropertyLookupService
         if ($address === '' && ! ($mun && $block && $lot)) {
             throw new ApiError('validation_failed', 'Enter an address, or a municipality code with block and lot.', 422);
         }
-        $key = 'property-lookup:'.hash('sha256', json_encode([$address, $mun, $block, $lot, $q['qualifier'] ?? '']));
+        $key = 'property-lookup:v2:'.hash('sha256', json_encode([$address, $mun, $block, $lot, $q['qualifier'] ?? '']));
 
         return Cache::remember($key, now()->addHours((int) config('legacy.property_lookup.cache_hours')), function () use ($address, $mun, $block, $lot, $q) {
             $sources = [];
@@ -242,7 +242,11 @@ final class PropertyLookupService
         // Geocodes are interpolated and the spatial window is finite; look the address up by text in the same municipality.
         if ($rows && ! array_filter($rows, $hit) && preg_match('/^\d+[A-Z]?$/', $num) && preg_match('/^[A-Z0-9]+$/', $core)) {
             $mun = (string) $rows[0]['mun_code'];
-            $extra = $this->parcelQuery(['where' => "PCL_MUN='".str_replace("'", "''", $mun)."' AND PROP_LOC LIKE '{$num} %{$core}%'"], $sources);
+            $like = "PROP_LOC LIKE '{$num} %{$core}%'";
+            if ($words = self::ordinalWords($core)) {
+                $like = "({$like} OR PROP_LOC LIKE '{$num} %{$words}%' OR PROP_LOC LIKE '{$num} %".str_replace('-', ' ', $words)."%')";
+            }
+            $extra = $this->parcelQuery(['where' => "PCL_MUN='".str_replace("'", "''", $mun)."' AND {$like}"], $sources);
             $seen = array_column($rows, 'pin');
             $rows = array_merge($rows, array_filter($extra, fn ($r) => ! in_array($r['pin'], $seen, true)));
             array_pop($sources);
@@ -534,11 +538,54 @@ final class PropertyLookupService
         return checkdate((int) $m[2], (int) $m[3], $year) ? sprintf('%04d-%02d-%02d', $year, $m[2], $m[3]) : null;
     }
 
+    private const UNIT_ORD = ['FIRST' => 1, 'SECOND' => 2, 'THIRD' => 3, 'FOURTH' => 4, 'FIFTH' => 5, 'SIXTH' => 6, 'SEVENTH' => 7, 'EIGHTH' => 8, 'NINTH' => 9,
+        'TENTH' => 10, 'ELEVENTH' => 11, 'TWELFTH' => 12, 'THIRTEENTH' => 13, 'FOURTEENTH' => 14, 'FIFTEENTH' => 15, 'SIXTEENTH' => 16, 'SEVENTEENTH' => 17,
+        'EIGHTEENTH' => 18, 'NINETEENTH' => 19, 'TWENTIETH' => 20, 'THIRTIETH' => 30, 'FORTIETH' => 40, 'FIFTIETH' => 50, 'SIXTIETH' => 60, 'SEVENTIETH' => 70,
+        'EIGHTIETH' => 80, 'NINETIETH' => 90];
+
+    private const TENS = ['TWENTY' => 20, 'THIRTY' => 30, 'FORTY' => 40, 'FIFTY' => 50, 'SIXTY' => 60, 'SEVENTY' => 70, 'EIGHTY' => 80, 'NINETY' => 90];
+
+    /** Tax lists often spell ordinal streets ("TWENTY-FOURTH AVE"); geocoders use digits ("24TH AVE"). Both normalize to digits. */
     private function normStreet(string $s): string
     {
         $words = preg_split('/\s+/', strtoupper(preg_replace('/[^A-Za-z0-9 ]+/', ' ', $s)), -1, PREG_SPLIT_NO_EMPTY);
+        $out = [];
+        for ($i = 0; $i < count($words); $i++) {
+            $w = $words[$i];
+            $n = null;
+            if (isset(self::TENS[$w]) && isset(self::UNIT_ORD[$words[$i + 1] ?? '']) && self::UNIT_ORD[$words[$i + 1]] < 10) {
+                $n = self::TENS[$w] + self::UNIT_ORD[$words[++$i]];
+            } elseif (isset(self::UNIT_ORD[$w])) {
+                $n = self::UNIT_ORD[$w];
+            }
+            $out[] = $n !== null ? self::ordinal($n) : (self::ABBREV[$w] ?? $w);
+        }
 
-        return implode(' ', array_map(fn ($w) => self::ABBREV[$w] ?? $w, $words));
+        return implode(' ', $out);
+    }
+
+    private static function ordinal(int $n): string
+    {
+        $suffix = in_array($n % 100, [11, 12, 13], true) ? 'TH' : (['TH', 'ST', 'ND', 'RD'][$n % 10] ?? 'TH');
+
+        return $n.$suffix;
+    }
+
+    /** "24TH" → "TWENTY-FOURTH" for text searches against tax lists. */
+    private static function ordinalWords(string $core): ?string
+    {
+        if (! preg_match('/^(\d{1,2})(ST|ND|RD|TH)$/', $core, $m)) {
+            return null;
+        }
+        $n = (int) $m[1];
+        $units = array_flip(array_filter(self::UNIT_ORD, fn ($v) => $v < 20));
+        if ($n < 20) {
+            return $units[$n] ?? null;
+        }
+        $tensOrd = array_flip(array_filter(self::UNIT_ORD, fn ($v) => $v >= 20));
+        $tens = array_flip(self::TENS);
+
+        return $n % 10 === 0 ? ($tensOrd[$n] ?? null) : (isset($tens[$n - $n % 10], $units[$n % 10]) ? $tens[$n - $n % 10].'-'.$units[$n % 10] : null);
     }
 
     private function streetCore(string $normStreet): string

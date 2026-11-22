@@ -205,6 +205,25 @@ class PropertyRecordsTest extends TestCase
         $this->assertEquals([1950000, 1], [(float) $f['value'], $f['proposed_valuations']]);
     }
 
+    public function test_spelled_out_ordinal_streets_match_numeric_addresses(): void
+    {
+        Http::fake([
+            'geocoding.geo.census.gov/*' => Http::response(['result' => ['addressMatches' => [[
+                'matchedAddress' => '110 24TH AVE, EXAMPLE PARK, NJ, 08752', 'coordinates' => ['x' => -74.08, 'y' => 39.9],
+                'addressComponents' => ['streetName' => '24TH', 'suffixType' => 'AVE', 'city' => 'EXAMPLE PARK', 'state' => 'NJ', 'zip' => '08752'],
+                'geographies' => ['Counties' => [['BASENAME' => 'Ocean']], 'County Subdivisions' => [['NAME' => 'Example township']]],
+            ]]]]),
+            'services2.arcgis.com/*' => Http::sequence()
+                ->push(['features' => [['attributes' => ['PAMS_PIN' => '1599_1_9', 'PCL_MUN' => '1599', 'PCLBLOCK' => '1', 'PCLLOT' => '9', 'PROP_LOC' => '100 TWENTY-FOURTH AVE #B4'], 'centroid' => ['x' => -74.08, 'y' => 39.9]]]])
+                ->push(['features' => [['attributes' => ['PAMS_PIN' => '1599_1_2435', 'PCL_MUN' => '1599', 'PCLBLOCK' => '1', 'PCLLOT' => '2435', 'PROP_LOC' => '110 TWENTY-FOURTH AVE'], 'centroid' => ['x' => -74.0805, 'y' => 39.9]]]]),
+        ]);
+        $u = $this->makeUser('owner');
+        [$ws] = $this->makeWorkspace($u);
+        $p = $this->signIn($u)->send('POST', $this->wsUrl($ws, 'real-estate/lookup'), ['address' => '110 24th Ave, Example Park NJ'])->assertOk()->json('data.parcels.0');
+        $this->assertSame(['1599_1_2435', 'exact'], [$p['pin'], $p['match']]);
+        Http::assertSent(fn (Request $r) => str_contains(urldecode($r->url()), "PROP_LOC LIKE '110 %TWENTY-FOURTH%'"));
+    }
+
     public function test_financing_hides_loans_without_debt_access(): void
     {
         $owner = $this->makeUser('owner');

@@ -166,6 +166,7 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::post('/accounts/{account}/not-duplicate', [IntegrationController::class, 'notDuplicate'])->where('account', $ulid);
         Route::get('/account-duplicates', [IntegrationController::class, 'duplicates']);
         Route::post('/accounts/{account}/authority', [IntegrationController::class, 'authority'])->where('account', $ulid);
+        Route::post('/accounts/{account}/source-role', [IntegrationController::class, 'sourceRole'])->where('account', $ulid);
         Route::post('/source-conflicts/{conflict}/resolve', [IntegrationController::class, 'resolveConflict'])->where('conflict', $ulid);
 
         // Tax

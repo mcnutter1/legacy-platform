@@ -514,6 +514,7 @@ export interface Accounts {
   is_liability?: boolean | null;
   visibility?: 'visible' | 'hidden' | 'ignored' | null;
   visibility_reason?: string | null;
+  source_roles?: unknown | null;
 }
 
 export interface Transactions {

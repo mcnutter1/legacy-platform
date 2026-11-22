@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — combined accounts with several sources
+
+### Implemented
+- An account linked to several sources (e.g. Monarch and Snowball) takes each kind of data — balance, holdings,
+  transactions — from one source. Default: the primary source supplies what it reports and another linked source fills in
+  holdings or transactions the primary lacks; each can be chosen explicitly on the account's Sources tab.
+- Same-day positions from a different source than the balance no longer override the reported balance in net worth.
+- "Combine another account into this one" on the account's Sources & duplicates tab links any two accounts manually.
+
 ## Unreleased — paystub values from assistants
 
 ### Implemented

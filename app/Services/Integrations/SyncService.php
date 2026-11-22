@@ -263,23 +263,27 @@ final class SyncService
                     continue;
                 }
                 $touched[] = $account->id;
-                if ($account->connection_id !== $c->id) {
+                $mine = array_keys(array_filter(self::effectiveRoles($account), fn ($cid) => $cid === $c->id));
+                if (! $mine) {
                     $stats['observed_only']++;
 
                     continue;
                 }
-                if ($a['balance'] !== null) {
+                if ($account->connection_id !== $c->id) {
+                    $stats['supplemental'] = ($stats['supplemental'] ?? 0) + 1;
+                }
+                if ($a['balance'] !== null && in_array('balance', $mine, true)) {
                     $this->balance($c, $account, $a, $today);
                     $stats['balances']++;
                 }
-                if ($a['holdings']) {
+                if ($a['holdings'] && in_array('holdings', $mine, true)) {
                     if ($this->ctx->can('portfolio', 'write', $account->scope_id)) {
                         $stats['holdings'] += $this->holdings($c, $account, $a['holdings'], $today);
                     } else {
                         $stats['skipped_no_access']++;
                     }
                 }
-                foreach ($a['transactions'] as $t) {
+                foreach (in_array('transactions', $mine, true) ? $a['transactions'] : [] as $t) {
                     if (! $t['pending']) {
                         $txRows[] = ['account' => $account, 't' => $t];
                     }
@@ -362,6 +366,64 @@ final class SyncService
 
             return ['account_id' => $into->id, 'moved' => $moved];
         });
+    }
+
+    public const ROLES = ['balance', 'holdings', 'transactions'];
+
+    /**
+     * Which connection supplies each kind of data for an account. An explicit choice wins; otherwise the authoritative
+     * source supplies everything it reports, and another linked source fills in holdings or transactions it does not.
+     *
+     * @return array<string, string|null> role => connection id
+     */
+    public static function effectiveRoles(object $account): array
+    {
+        $explicit = json_decode((string) ($account->source_roles ?? ''), true) ?: [];
+        $vals = DB::table('external_links')->where('entity_type', 'account')->where('entity_id', $account->id)->whereNull('archived_at')->orderBy('created_at')->get()
+            ->mapWithKeys(fn ($l) => [$l->connection_id => json_decode((string) $l->last_values, true) ?: []])->all();
+        $primary = $account->connection_id;
+        $has = fn (?string $cid, string $role, bool $unknownCounts) => $cid !== null && isset($vals[$cid]) && ($role === 'holdings'
+            ? ! empty($vals[$cid]['holdings'])
+            : (array_key_exists('transactions', $vals[$cid]) ? $vals[$cid]['transactions'] > 0 : $unknownCounts));
+        $out = [];
+        foreach (self::ROLES as $role) {
+            if (isset($explicit[$role]) && isset($vals[$explicit[$role]])) {
+                $out[$role] = $explicit[$role];
+            } elseif ($role === 'balance' || $primary === null || ! isset($vals[$primary]) || $has($primary, $role, true)) {
+                $out[$role] = $primary;
+            } else {
+                $alt = collect(array_keys($vals))->first(fn ($cid) => $cid !== $primary && $has($cid, $role, false));
+                $out[$role] = $alt ?? $primary;
+            }
+        }
+
+        return $out;
+    }
+
+    /** Choose which linked source supplies one kind of data for an account (null = automatic). */
+    public function setSourceRole(string $accountId, string $role, ?string $connectionId): array
+    {
+        $a = Str::isUlid($accountId) ? $this->ctx->constrain(DB::table('accounts'), 'ledger', 'write')->where('id', $accountId)->whereNull('archived_at')->first() : null;
+        if (! $a) {
+            throw ApiError::notFound();
+        }
+        if (! in_array($role, self::ROLES, true)) {
+            throw new ApiError('validation_failed', 'Unknown data type.', 422);
+        }
+        if ($connectionId !== null && ! DB::table('external_links')->where('entity_type', 'account')->where('entity_id', $a->id)->where('connection_id', $connectionId)->whereNull('archived_at')->exists()) {
+            throw new ApiError('validation_failed', 'That source does not report this account.', 422);
+        }
+        $roles = json_decode((string) $a->source_roles, true) ?: [];
+        if ($connectionId === null) {
+            unset($roles[$role]);
+        } else {
+            $roles[$role] = $connectionId;
+        }
+        DB::table('accounts')->where('id', $a->id)->update(['source_roles' => $roles ? json_encode($roles) : null, 'edit_version' => $a->edit_version + 1,
+            'updated_by' => $this->ctx->user->id, 'updated_at' => now()]);
+        Audit::log('accounts.source_role_changed', 'accounts', $a->id, ['role' => $role, 'connection_id' => $connectionId], scopeId: $a->scope_id);
+
+        return ['account_id' => $a->id, 'roles' => self::effectiveRoles(DB::table('accounts')->find($a->id))];
     }
 
     /** Choose which linked source is authoritative for an account's balances, holdings and transactions. */
@@ -559,7 +621,7 @@ final class SyncService
                 $m[$h['symbol']] = Dec::norm(Dec::add($m[$h['symbol']] ?? '0', $h['quantity']), 10);
 
                 return $m;
-            }, []) : null];
+            }, []) : null, 'transactions' => count($a['transactions'])];
         $existing = DB::table('external_links')->where('connection_id', $c->id)->where('entity_type', $type)->where('external_id', $a['external_id'])->first();
         $row = ['entity_id' => $entity->id, 'scope_id' => $entity->scope_id, 'external_name' => mb_substr($a['name'], 0, 255), 'last_values' => json_encode($values),
             'last_seen_at' => now(), 'archived_at' => null, 'updated_at' => now()];
@@ -590,6 +652,9 @@ final class SyncService
 
     private function holdings(object $c, object $account, array $holdings, string $today): int
     {
+        // One source supplies an account's positions; switching sources replaces today's positions rather than mixing them.
+        DB::table('holdings')->where('account_id', $account->id)->where('as_of', $today)->whereNull('archived_at')
+            ->where(fn ($q) => $q->whereNull('source_ref')->orWhere('source_ref', '!=', $c->id))->where('source', '!=', 'manual')->update(['archived_at' => now()]);
         $n = 0;
         $merged = [];
         foreach ($holdings as $h) {

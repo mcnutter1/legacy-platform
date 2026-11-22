@@ -264,7 +264,7 @@ final class Registry
                     'currency' => 'cur', 'mask' => 's', 'owner_person_id' => 'ref:persons', 'owner_entity_id' => 'ref:legal_entities',
                     'connection_id' => 'ref:source_connections', 'external_ref' => 's', 'opened_on' => 'd', 'closed_on' => 'd',
                     'status' => 'e:open|closed|frozen', 'liquidity' => 'e:daily|t_plus|monthly|quarterly|restricted|illiquid', 'restrictions' => 't', 'is_liability' => 'b',
-                    'visibility' => '~e:visible|hidden|ignored', 'visibility_reason' => '~s',
+                    'visibility' => '~e:visible|hidden|ignored', 'visibility_reason' => '~s', 'source_roles' => '~j',
                 ],
                 'list' => ['name', 'institution', 'kind', 'tax_bucket', 'owner_person_id', 'status', 'visibility'],
                 'search' => ['name', 'institution'],

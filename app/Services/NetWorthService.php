@@ -154,7 +154,10 @@ final class NetWorthService
     {
         $h = DB::table('holdings')->where('account_id', $accountId)->where('as_of', '<=', $asOf)->whereNull('archived_at')->max('as_of');
         $b = DB::table('balance_snapshots')->where('account_id', $accountId)->where('as_of', '<=', $asOf)->whereNull('archived_at')->orderByDesc('as_of')->first();
-        if ($h && (! $b || $h >= $b->as_of)) {
+        // Same-day positions from a different source than the balance may be partial (e.g. no cash line); trust the reported balance then.
+        $sameDayOtherSource = $h && $b && $h === $b->as_of && $b->source_ref !== null
+            && ! DB::table('holdings')->where('account_id', $accountId)->where('as_of', $h)->whereNull('archived_at')->where('source_ref', $b->source_ref)->exists();
+        if ($h && (! $b || $h >= $b->as_of) && ! $sameDayOtherSource) {
             $rows = DB::table('holdings')->where('account_id', $accountId)->where('as_of', $h)->whereNull('archived_at')->get();
             if ($rows->contains(fn ($r) => $r->market_value === null && $r->price === null)) {
                 return [null, 'holdings (unpriced)', $h];

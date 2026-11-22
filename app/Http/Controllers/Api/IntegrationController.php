@@ -143,12 +143,21 @@ class IntegrationController extends ApiController
 
         return $this->ok([
             'authoritative_connection_id' => $a->connection_id,
+            'roles' => SyncService::effectiveRoles($a),
+            'explicit_roles' => json_decode((string) $a->source_roles, true) ?: new \stdClass,
             'sources' => $links->map(fn ($l) => ['connection_id' => $l->connection_id, 'provider' => $l->provider, 'label' => $conns[$l->connection_id]->label ?? $l->provider,
                 'status' => $conns[$l->connection_id]->status ?? null, 'external_name' => $l->external_name, 'match_method' => $l->match_method, 'last_seen_at' => $l->last_seen_at,
                 'last_values' => json_decode((string) $l->last_values, true), 'authoritative' => $l->connection_id === $a->connection_id])->values(),
             'conflicts' => $ctx->constrain(DB::table('source_discrepancies'), 'ledger')->where('entity_type', 'account')->where('entity_id', $a->id)->whereIn('status', ['open', 'ignored'])
                 ->orderByDesc('last_seen_at')->get()->map(fn ($d) => ['observed' => json_decode((string) $d->observed, true)] + (array) $d)->values(),
         ]);
+    }
+
+    public function sourceRole(Request $r, string $account): JsonResponse
+    {
+        $d = $this->validated($r, ['role' => 'required|in:'.implode(',', SyncService::ROLES), 'connection_id' => 'nullable|string|max:26']);
+
+        return $this->ok((new SyncService($this->ctx()))->setSourceRole($account, $d['role'], $d['connection_id'] ?? null));
     }
 
     public function merge(Request $r, string $account): JsonResponse

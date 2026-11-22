@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { useCommand, useWsQuery } from '../api/hooks';
+import { useCommand, useResourceList, useWsQuery } from '../api/hooks';
 import type { AnyRecord } from '../api/types';
 import { useWorkspace } from '../app/workspace';
 import { SourceIcon } from './sources';
@@ -71,6 +71,31 @@ function Side({ s }: { s: PairSide }) {
   );
 }
 
+/** Link any other account into this one, e.g. the Snowball and Monarch copies of the same brokerage account. */
+function CombinePicker({ accountId }: { accountId: string }) {
+  const accounts = useResourceList('accounts', { limit: 200 });
+  const merge = useCommand<{ from: string; into_account_id: string }>((b) => `accounts/${b.from}/merge`);
+  const [other, setOther] = useState('');
+  const options = (accounts.data?.data ?? []).filter((a) => a.id !== accountId);
+  const name = options.find((a) => a.id === other)?._title;
+  return (
+    <form className="flex flex-wrap items-end gap-3 border-t border-line px-5 py-4 text-sm" onSubmit={(e) => {
+      e.preventDefault();
+      if (other && confirm(`Combine “${name}” into this account? Its sources, balances, holdings, transactions and lots move here and it is archived. Both sources then feed this account.`)) {
+        merge.mutate({ from: other, into_account_id: accountId }, { onSuccess: () => setOther('') });
+      }
+    }}>
+      <label className="field min-w-64 flex-1"><span>Combine another account into this one</span>
+        <select value={other} onChange={(e) => setOther(e.target.value)}>
+          <option value="">— Choose an account —</option>
+          {options.map((a) => <option key={a.id} value={a.id}>{String(a._title)}{a.institution ? ` · ${String(a.institution)}` : ''}{a.visibility && a.visibility !== 'visible' ? ` (${String(a.visibility)})` : ''}</option>)}
+        </select></label>
+      <button className="btn-secondary" disabled={!other || merge.isPending}>Combine</button>
+      <div className="w-full"><FormError error={merge.error} /></div>
+    </form>
+  );
+}
+
 /** Suggested duplicate pairs with merge / ignore / not-a-duplicate actions. Pass accountId to focus on one account. */
 export function DuplicatesPanel({ accountId }: { accountId?: string }) {
   const q = useWsQuery<Pair[]>(['account-duplicates', accountId ?? 'all'], 'account-duplicates', { query: accountId ? { account_id: accountId } : undefined });
@@ -114,6 +139,7 @@ export function DuplicatesPanel({ accountId }: { accountId?: string }) {
         )}
       </Query>
       <div className="px-5 pb-4"><FormError error={merge.error ?? notDup.error ?? vis.error} /></div>
+      {accountId && <CombinePicker accountId={accountId} />}
       <Dialog open={!!confirm} onClose={() => setConfirm(null)} title="Merge duplicate account">
         {confirm && (
           <div className="space-y-4 text-sm">

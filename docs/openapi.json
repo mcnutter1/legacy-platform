@@ -812,6 +812,43 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/accounts/{account}/source-role": {
+            "post": {
+                "operationId": "post_workspaces_workspace_accounts_account_source_role",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/accounts/{account}/sources": {
             "get": {
                 "operationId": "get_workspaces_workspace_accounts_account_sources",
@@ -6643,6 +6680,13 @@
                     },
                     "visibility_reason": {
                         "type": "string",
+                        "readOnly": true
+                    },
+                    "source_roles": {
+                        "type": [
+                            "object",
+                            "array"
+                        ],
                         "readOnly": true
                     }
                 },
@@ -14333,6 +14377,16 @@
                 {
                     "name": "visibility_reason",
                     "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "source_roles",
+                    "type": "j",
                     "required": false,
                     "readonly": true,
                     "values": null,

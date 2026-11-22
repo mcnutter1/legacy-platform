@@ -391,6 +391,37 @@ class IntegrationsTest extends TestCase
         $this->assertStringContainsString('homes and vehicles', $issues);
     }
 
+    public function test_linked_sources_each_supply_the_detail_the_other_lacks_and_roles_can_be_chosen(): void
+    {
+        $this->monarch['holdings']['holdings'] = [];
+        $u = $this->makeUser('owner');
+        [$ws, , $joint] = $this->makeWorkspace($u);
+        $mon = $this->monarchConnection($ws, $u, $joint->id);
+        $this->work();
+        $snow = $this->snowballConnection($ws, $u, $joint->id);
+        $this->work();
+        $brokerage = DB::table('accounts')->where('mask', '1234')->first();
+        $this->assertSame(2, DB::table('accounts')->count(), 'Snowball linked to the Monarch account');
+        $this->assertSame($mon, $brokerage->connection_id);
+
+        $src = $this->signIn($u)->getJson($this->wsUrl($ws, "accounts/{$brokerage->id}/sources"))->assertOk()->json('data');
+        $this->assertSame(['balance' => $mon, 'holdings' => $snow, 'transactions' => $mon], $src['roles'], 'Snowball fills in the positions Monarch lacks');
+        $this->assertSame(2, DB::table('holdings')->where('account_id', $brokerage->id)->whereNull('archived_at')->where('source_ref', $snow)->count());
+        $this->assertSame(0, DB::table('balance_snapshots')->where('account_id', $brokerage->id)->where('source_ref', $snow)->count(), 'balance stays with the primary');
+        [$value, $method] = app(\App\Services\NetWorthService::class)->accountValue($brokerage->id, now()->toDateString());
+        $this->assertSame(['100000', 'balance snapshot'], [rtrim(rtrim($value, '0'), '.'), $method], 'same-day positions from another source do not override the reported balance');
+
+        // Choosing Monarch for holdings stops Snowball writing them; returning to automatic restores it.
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$brokerage->id}/source-role"), ['role' => 'holdings', 'connection_id' => $mon])->assertOk()
+            ->assertJsonPath('data.roles.holdings', $mon);
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$brokerage->id}/source-role"), ['role' => 'holdings', 'connection_id' => (string) \Illuminate\Support\Str::ulid()])->assertStatus(422);
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "integrations/{$snow}/sync"))->assertStatus(202);
+        $this->work();
+        $this->assertSame(0, json_decode(DB::table('source_connections')->where('id', $snow)->value('last_sync_stats'), true)['holdings']);
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "accounts/{$brokerage->id}/source-role"), ['role' => 'holdings', 'connection_id' => null])->assertOk()
+            ->assertJsonPath('data.roles.holdings', $snow);
+    }
+
     public function test_ambiguous_match_is_flagged_and_can_be_merged(): void
     {
         $u = $this->makeUser('owner');

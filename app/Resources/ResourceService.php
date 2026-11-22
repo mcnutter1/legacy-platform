@@ -156,6 +156,7 @@ final class ResourceService
         }
         $scopeId = $this->resolveWriteScope($def, $input['scope_id'] ?? null, $input['domain'] ?? null);
         $data = $this->validate($def, $input, true);
+        $this->assertRequiredWithout($def, $input, null);
         $this->assertRefs($def, $data);
 
         return DB::transaction(function () use ($def, $data, $scopeId, $type) {
@@ -172,6 +173,7 @@ final class ResourceService
             Audit::log("{$type}.created", $type, $m->id, ['fields' => array_keys($data)], scopeId: $scopeId);
             Outbox::publish('record.created', ['type' => $type, 'id' => $m->id], $type, $m->id);
             $type === 'ownership_interests' && TitleService::syncDerived($this->ctx->workspace->id, (string) $m->subject_type, (string) $m->subject_id);
+            $this->refreshDerivedBalances($type, $m->id);
 
             return $m->fresh() ?? $m;
         });
@@ -186,6 +188,7 @@ final class ResourceService
         $row = $this->find($type, $id, 'write');
         $this->assertVersion($row, $ifMatch);
         $data = $this->validate($def, $input, false);
+        $this->assertRequiredWithout($def, $input, $row);
         $this->assertRefs($def, $data);
         $newScope = $input['scope_id'] ?? null;
         if ($newScope && $newScope !== $row->scope_id) {
@@ -207,6 +210,7 @@ final class ResourceService
                 TitleService::syncDerived($this->ctx->workspace->id, (string) $row->subject_type, (string) $row->subject_id);
                 ($fresh->subject_id ?? null) !== $row->subject_id && TitleService::syncDerived($this->ctx->workspace->id, (string) $fresh->subject_type, (string) $fresh->subject_id);
             }
+            $this->refreshDerivedBalances($type, $row->id);
 
             return $this->find($type, $row->id);
         });
@@ -356,6 +360,26 @@ final class ResourceService
     }
 
     /** @return array<string,mixed> */
+    /** A field required only when its source field is empty (e.g. a debt's balance when no account is linked). */
+    private function assertRequiredWithout(array $def, array $input, ?object $row): void
+    {
+        $filled = fn (string $k) => array_key_exists($k, $input) ? ($input[$k] !== null && $input[$k] !== '') : ($row !== null && $row->{$k} !== null && $row->{$k} !== '');
+        foreach ((array) ($def['required_without'] ?? []) as $field => $other) {
+            if (! $filled($field) && ! $filled($other)) {
+                throw new ApiError('validation_failed', 'Some fields need attention.', 422, [$field => [ucfirst(str_replace('_', ' ', $field)).' is required unless '.str_replace(['_id', '_'], ['', ' '], $other).' is linked.']]);
+            }
+        }
+    }
+
+    private function refreshDerivedBalances(string $type, string $id): void
+    {
+        if ($type === 'liabilities') {
+            \App\Services\LiabilityBalances::refresh(DB::table('liabilities')->find($id));
+        } elseif ($type === 'balance_snapshots' && ($acct = DB::table('balance_snapshots')->where('id', $id)->value('account_id'))) {
+            \App\Services\LiabilityBalances::refreshForAccount($acct);
+        }
+    }
+
     public function validate(array $def, array $input, bool $creating): array
     {
         $rules = [];

@@ -1381,7 +1381,7 @@ export interface Liabilities {
   account_id?: Ulid | null;
   currency?: string | null;
   original_principal?: Decimal | null;
-  current_balance: Decimal;
+  current_balance?: Decimal | null;
   balance_as_of?: ISODate | null;
   interest_rate?: Decimal | null;
   rate_type?: 'fixed' | 'arm' | 'variable' | 'interest_only' | null;

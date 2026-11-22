@@ -70,7 +70,8 @@ class ResourceController extends ApiController
             foreach ($def['fields'] as $name => $spec) {
                 $f = Registry::field($spec);
                 $fields[] = ['name' => $name, 'type' => $f['type'], 'required' => $f['required'], 'readonly' => $f['readonly'] || ($def['readonly'] ?? false),
-                    'values' => $f['values'], 'ref' => $f['ref'], 'poly_type_field' => $def['poly'][$name] ?? null, 'sensitive' => $def['sensitive'][$name] ?? null];
+                    'values' => $f['values'], 'ref' => $f['ref'], 'poly_type_field' => $def['poly'][$name] ?? null, 'sensitive' => $def['sensitive'][$name] ?? null,
+                    'derived_from' => $def['derived_from'][$name] ?? null, 'required_without' => $def['required_without'][$name] ?? null];
             }
             $out[$type] = ['type' => $type, 'label' => $def['label'], 'domain' => $def['domain'], 'title' => $def['title'] ?? null, 'list' => $def['list'] ?? [],
                 'readonly' => (bool) ($def['readonly'] ?? false), 'creatable' => ! ($def['readonly'] ?? false) && ! ($def['no_create'] ?? false),

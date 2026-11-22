@@ -115,6 +115,7 @@ export function ResourceForm({ meta, record, defaults = {}, hidden = [], onSaved
     setJsonErr(null);
     const data: Record<string, unknown> = {};
     for (const f of editable) {
+      if (f.derived_from && vals[f.derived_from]) continue;
       let v = vals[f.name];
       if (v === undefined) continue;
       if (v === '' && !f.required) v = null;
@@ -144,9 +145,18 @@ export function ResourceForm({ meta, record, defaults = {}, hidden = [], onSaved
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {editable.map((f) => {
           const v = vals[f.name];
-          const label = `${humanize(f.name.replace(/_id$/, ''))}${f.required ? ' *' : ''}`;
+          const required = f.required || (!!f.required_without && !vals[f.required_without]);
+          const label = `${humanize(f.name.replace(/_id$/, ''))}${required ? ' *' : ''}`;
           const err = fieldErrors[f.name]?.[0];
           const wide = f.type === 'j' || f.type === 't';
+          if (f.derived_from && vals[f.derived_from]) {
+            return (
+              <div key={f.name} className="field">
+                <span>{humanize(f.name)}</span>
+                <p className="min-h-11 py-2 text-sm text-muted">{v ? `${String(v)} · ` : ''}From the linked {humanize(f.derived_from.replace(/_id$/, ''))}; updates with each sync.</p>
+              </div>
+            );
+          }
           let input: ReactNode;
           if (f.type === 'enum') {
             input = (
@@ -170,7 +180,7 @@ export function ResourceForm({ meta, record, defaults = {}, hidden = [], onSaved
           } else if (f.type === 'j' || f.type === 't') {
             input = <textarea value={String(v ?? '')} onChange={(e) => set(f.name, e.target.value)} rows={f.type === 'j' ? 5 : 3} className={f.type === 'j' ? 'font-mono text-xs' : ''} />;
           } else if (MONEY.has(f.type) || DECIMAL.has(f.type) || f.type === 'i' || f.type === 'y') {
-            input = <input inputMode="decimal" value={String(v ?? '')} onChange={(e) => set(f.name, e.target.value.replace(/[$,\s]/g, ''))} required={f.required}
+            input = <input inputMode="decimal" value={String(v ?? '')} onChange={(e) => set(f.name, e.target.value.replace(/[$,\s]/g, ''))} required={required}
               pattern={f.type === 'i' || f.type === 'y' ? '-?\\d*' : '-?\\d*(\\.\\d+)?'} />;
           } else {
             input = <input value={String(v ?? '')} onChange={(e) => set(f.name, e.target.value)} required={f.required} maxLength={f.type === 'cur' ? 3 : 255} />;

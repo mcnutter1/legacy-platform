@@ -274,6 +274,7 @@ final class SyncService
                 }
                 if ($a['balance'] !== null && in_array('balance', $mine, true)) {
                     $this->balance($c, $account, $a, $today);
+                    \App\Services\LiabilityBalances::refreshForAccount($account->id);
                     $stats['balances']++;
                 }
                 if ($a['holdings'] && in_array('holdings', $mine, true)) {

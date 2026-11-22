@@ -594,7 +594,7 @@ final class Registry
                 'domain' => 'debt', 'label' => 'Debts', 'title' => 'name',
                 'fields' => [
                     'name' => 's!', 'kind' => 'e:mortgage|heloc|auto|boat|credit_card|personal_loc|student|business|intrafamily_note|policy_loan|margin|guarantee|contingent|other!',
-                    'lender' => 's', 'account_id' => 'ref:accounts', 'currency' => 'cur', 'original_principal' => 'm', 'current_balance' => 'm!', 'balance_as_of' => 'd',
+                    'lender' => 's', 'account_id' => 'ref:accounts', 'currency' => 'cur', 'original_principal' => 'm', 'current_balance' => 'm', 'balance_as_of' => 'd',
                     'interest_rate' => 'r', 'rate_type' => 'e:fixed|arm|variable|interest_only', 'rate_index' => 's', 'rate_margin' => 'r', 'rate_caps' => 'j',
                     'rate_reset_months' => 'i', 'next_reset_on' => 'd', 'compounding' => 'e:monthly|daily_actual_365|daily_actual_360|simple',
                     'term_months' => 'i', 'origination_on' => 'd', 'first_payment_on' => 'd', 'payment_amount' => 'm', 'payment_frequency' => 'e:monthly|biweekly|quarterly|annual|interest_only|none',
@@ -604,6 +604,9 @@ final class Registry
                 ],
                 'list' => ['name', 'kind', 'lender', 'current_balance', 'interest_rate', 'payment_amount', 'collateral_type', 'collateral_id', 'status'],
                 'poly' => ['collateral_id' => 'collateral_type'],
+                // Read from the linked account's latest balance instead of being typed; required only without an account.
+                'derived_from' => ['current_balance' => 'account_id', 'balance_as_of' => 'account_id'],
+                'required_without' => ['current_balance' => 'account_id'],
             ],
             'liability_payments' => [
                 'domain' => 'debt', 'label' => 'Debt payments', 'order' => ['paid_on', 'desc'], 'parent' => 'liability_id',

@@ -17,6 +17,10 @@ export interface FieldMeta {
   ref: string | null;
   poly_type_field: string | null;
   sensitive: string | null;
+  /** Filled from this other field's linked record when it is set (not typed). */
+  derived_from?: string | null;
+  /** Required only when this other field is empty. */
+  required_without?: string | null;
 }
 
 export interface ResourceMeta {

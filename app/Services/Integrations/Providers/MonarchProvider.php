@@ -80,6 +80,15 @@ final class MonarchProvider extends Provider
         };
     }
 
+    public function payloadIssues(array $payload): array
+    {
+        $n = (int) ($payload['finicity_excluded']['hidden_account_count'] ?? 0);
+        $inst = array_filter((array) ($payload['finicity_excluded']['institutions'] ?? []), 'is_string');
+
+        return $n > 0 ? ["Monarch withholds {$n} account(s) connected through Mastercard/Finicity".($inst ? ' ('.implode(', ', array_slice($inst, 0, 5)).')' : '')
+            .' from connectors; their balances and holdings cannot be synced. Switch them to Plaid/MX in Monarch, or use Snowball or a CSV import.'] : [];
+    }
+
     /** Homes and vehicles Monarch tracks as accounts belong under Real estate / Assets, not accounts. Their loans are kept. */
     public function skipReason(array $row): ?string
     {

@@ -174,7 +174,7 @@ class IntegrationsTest extends TestCase
                     ['id' => 'a3', 'name' => 'Example Card', 'type' => 'Credit Card', 'balance' => -420.5, 'institution' => 'Example Bank'],
                     ['id' => 'a4', 'name' => 'Example Home', 'type' => 'Primary Home', 'balance' => 650000.0],
                     ['id' => 'a5', 'name' => 'Example 401k', 'type' => '401k', 'balance' => 12000.0],
-                ], 'total_balance' => 694580.1],
+                ], 'total_balance' => 694580.1, 'finicity_excluded' => ['hidden_account_count' => 1, 'institutions' => ['Example Fidelity']]],
                 'GetInvestments' => ['investments' => match ($args['accounts'][0] ?? null) {
                     'Example Brokerage' => [['ticker' => 'VTI', 'quantity' => 100, 'value' => 30000.0, 'price' => 300.0, 'security_type' => 'etf', 'account_holdings' => []], $exmpl],
                     'Example 401k' => [$exmpl, ['ticker' => null, 'quantity' => 11750, 'value' => 11750.0, 'security_type' => 'cash', 'account_holdings' => []]],
@@ -386,6 +386,9 @@ class IntegrationsTest extends TestCase
         $this->assertSame(['investment_tracking'], array_values(array_unique(array_map(fn ($c) => $c[1]['intent'], array_filter($this->monarchCalls, fn ($c) => $c[0] === 'GetInvestments')))));
         $this->assertSame([100], array_values(array_unique(array_map(fn ($c) => $c[1]['limit'], array_filter($this->monarchCalls, fn ($c) => $c[0] === 'GetTransactions')))));
         $this->assertNotContains('CreateTransaction', array_column($this->monarchCalls, 0), 'write tools are never called');
+        $issues = implode(' ', json_decode(DB::table('source_connections')->where('id', $mon)->value('last_preview'), true)['issues']);
+        $this->assertStringContainsString('withholds 1 account(s)', $issues);
+        $this->assertStringContainsString('homes and vehicles', $issues);
     }
 
     public function test_ambiguous_match_is_flagged_and_can_be_merged(): void

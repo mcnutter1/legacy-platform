@@ -99,6 +99,12 @@ abstract class Provider
         return $this->isAggregate($row) ? 'combined/aggregate portfolio' : null;
     }
 
+    /** Provider notices carried in a payload (e.g. accounts the provider withholds). */
+    public function payloadIssues(array $payload): array
+    {
+        return [];
+    }
+
     /** Values for a required enum such as an "intent" parameter, per role. */
     public function preferredEnums(string $role): array
     {

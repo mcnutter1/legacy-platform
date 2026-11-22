@@ -39,7 +39,9 @@ final class SyncService
         }
         $accounts = [];
         $skipped = [];
-        foreach (Shape::records($client->call($map['accounts'], $args), $p->accountKeys()) as $row) {
+        $accountsPayload = $client->call($map['accounts'], $args);
+        $issues = array_merge($issues, $p->payloadIssues(is_array($accountsPayload) ? $accountsPayload : []));
+        foreach (Shape::records($accountsPayload, $p->accountKeys()) as $row) {
             if ($why = $p->skipReason($row)) {
                 $skipped[$why] = ($skipped[$why] ?? 0) + 1;
 
@@ -121,13 +123,16 @@ final class SyncService
                 $seen = [];
                 foreach ($accounts as $ref => $acc) {
                     foreach ($acc['holdings'] as $h) {
-                        $seen[$h['symbol'].'|'.$h['quantity'].'|'.$h['market_value']][$ref] = true;
+                        if (($h['account_ref'] ?? null) === null) {
+                            $seen[$h['symbol'].'|'.$h['quantity'].'|'.$h['market_value']][$ref] = true;
+                        }
                     }
                 }
                 $ambiguous = array_filter($seen, fn ($refs) => count($refs) > 1);
                 if ($ambiguous) {
                     foreach ($accounts as $ref => &$acc) {
-                        $acc['holdings'] = array_values(array_filter($acc['holdings'], fn ($h) => ! isset($ambiguous[$h['symbol'].'|'.$h['quantity'].'|'.$h['market_value']])));
+                        $acc['holdings'] = array_values(array_filter($acc['holdings'], fn ($h) => ($h['account_ref'] ?? null) !== null
+                            || ! isset($ambiguous[$h['symbol'].'|'.$h['quantity'].'|'.$h['market_value']])));
                     }
                     unset($acc);
                     $issues[] = count($ambiguous).' position(s) matched more than one account by name and were left out.';

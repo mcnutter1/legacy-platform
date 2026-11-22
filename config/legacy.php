@@ -101,11 +101,11 @@ return [
     'mcp' => [
         'enabled' => (bool) env('MCP_ENABLED', true),
         'protocol_versions' => ['2025-11-25', '2025-06-18', '2025-03-26'],
-        'allowed_origins' => $csv(env('MCP_ALLOWED_ORIGINS', 'https://chatgpt.com,https://chat.openai.com')),
+        'allowed_origins' => $csv(env('MCP_ALLOWED_ORIGINS', 'https://chatgpt.com,https://chat.openai.com,https://claude.ai,https://claude.com')),
         'access_token_ttl' => 900,
         'refresh_token_ttl' => 60 * 60 * 24 * 30,
         'dynamic_registration' => (bool) env('MCP_DYNAMIC_REGISTRATION', true),
-        'allowed_redirect_hosts' => $csv(env('MCP_REDIRECT_HOSTS', 'chatgpt.com,chat.openai.com')),
+        'allowed_redirect_hosts' => $csv(env('MCP_REDIRECT_HOSTS', 'chatgpt.com,chat.openai.com,claude.ai,claude.com')),
         'max_results' => 50,
     ],
 

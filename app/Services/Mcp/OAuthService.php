@@ -45,8 +45,11 @@ final class OAuthService
             $this->assertRedirectAllowed($u);
         }
         $method = $data['token_endpoint_auth_method'] ?? 'none';
+        if (! in_array($method, ['none', 'client_secret_post', 'client_secret_basic'], true)) {
+            throw new ApiError('invalid_client_metadata', 'Supported token_endpoint_auth_method values: none, client_secret_post, client_secret_basic.', 400);
+        }
         $clientId = 'mcp_'.Str::random(24);
-        $secret = $method === 'client_secret_post' ? Str::random(48) : null;
+        $secret = $method !== 'none' ? Str::random(48) : null;
         DB::table('oauth_clients')->insert(['id' => (string) Str::ulid(), 'client_id' => $clientId, 'name' => mb_substr((string) ($data['client_name'] ?? 'MCP client'), 0, 100),
             'redirect_uris' => json_encode($uris), 'client_secret_hash' => $secret ? hash('sha256', $secret) : null, 'registration' => 'dynamic',
             'created_at' => now(), 'updated_at' => now()]);

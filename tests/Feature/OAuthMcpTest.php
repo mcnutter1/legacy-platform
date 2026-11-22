@@ -76,6 +76,27 @@ class OAuthMcpTest extends TestCase
         $this->postJson('/oauth/register', ['redirect_uris' => ['https://evil.example/cb']])->assertStatus(400);
     }
 
+    public function test_claude_registration_with_basic_client_auth(): void
+    {
+        $redirect = 'https://claude.ai/api/mcp/auth_callback';
+        $this->postJson('/oauth/register', ['redirect_uris' => [$redirect], 'token_endpoint_auth_method' => 'private_key_jwt'])->assertStatus(400)
+            ->assertJsonPath('error', 'invalid_client_metadata');
+        $reg = $this->postJson('/oauth/register', ['client_name' => 'Claude', 'redirect_uris' => [$redirect], 'token_endpoint_auth_method' => 'client_secret_basic',
+            'grant_types' => ['authorization_code', 'refresh_token'], 'response_types' => ['code']])->assertCreated()->json();
+        $this->assertSame('client_secret_basic', $reg['token_endpoint_auth_method']);
+        $u = $this->makeUser('owner');
+        [, $m] = $this->makeWorkspace($u);
+        [$verifier, $challenge] = $this->pkce();
+        $params = ['client_id' => $reg['client_id'], 'redirect_uri' => $redirect, 'response_type' => 'code', 'code_challenge' => $challenge, 'code_challenge_method' => 'S256',
+            'scope' => 'wealth.read', 'resource' => url('/mcp')];
+        $res = $this->signIn($u)->post('/oauth/authorize', $params + ['decision' => 'allow', 'membership_id' => $m->id, 'scopes' => ['wealth.read']]);
+        parse_str((string) parse_url($res->headers->get('Location'), PHP_URL_QUERY), $q);
+        $body = ['grant_type' => 'authorization_code', 'code' => $q['code'], 'redirect_uri' => $redirect, 'code_verifier' => $verifier];
+        $basic = fn (string $secret) => ['Authorization' => 'Basic '.base64_encode(urlencode($reg['client_id']).':'.urlencode($secret))];
+        $this->withHeaders($basic('wrong'))->postJson('/oauth/token', $body)->assertStatus(401);
+        $this->withHeaders($basic($reg['client_secret']))->postJson('/oauth/token', $body)->assertOk()->assertJsonStructure(['access_token', 'refresh_token']);
+    }
+
     public function test_mcp_tools_are_trimmed_to_granted_scopes_and_return_data(): void
     {
         [$tokens, , $ws, $joint] = $this->connect(['wealth.read']);

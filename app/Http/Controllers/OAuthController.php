@@ -35,7 +35,7 @@ class OAuthController extends Controller
             'response_types_supported' => ['code'],
             'grant_types_supported' => ['authorization_code', 'refresh_token'],
             'code_challenge_methods_supported' => ['S256'],
-            'token_endpoint_auth_methods_supported' => ['none', 'client_secret_post'],
+            'token_endpoint_auth_methods_supported' => ['none', 'client_secret_post', 'client_secret_basic'],
             'scopes_supported' => array_keys(OAuthService::SCOPES),
         ]);
     }
@@ -118,6 +118,12 @@ class OAuthController extends Controller
     {
         try {
             $d = $r->all();
+            if (preg_match('/^Basic\s+(.+)$/i', (string) $r->header('Authorization'), $m)) {
+                // RFC 6749 §2.3.1: credentials are form-urlencoded before base64.
+                [$id, $secret] = array_pad(explode(':', (string) base64_decode($m[1], true), 2), 2, '');
+                $d['client_id'] = urldecode($id);
+                $d['client_secret'] = urldecode($secret);
+            }
             $out = match ($d['grant_type'] ?? '') {
                 'authorization_code' => $this->oauth->exchangeCode($d),
                 'refresh_token' => $this->oauth->refresh($d),

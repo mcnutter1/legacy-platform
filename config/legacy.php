@@ -33,7 +33,7 @@ return [
 
     'stepup' => [
         'required' => (bool) env('STEPUP_REQUIRED', true),
-        'ttl_seconds' => (int) env('STEPUP_TTL_SECONDS', 600),
+        'ttl_seconds' => (int) env('STEPUP_TTL_SECONDS', 0),
         'issuer' => env('STEPUP_TOTP_ISSUER', 'McNutt Legacy'),
     ],
 

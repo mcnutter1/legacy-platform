@@ -78,8 +78,10 @@ final class StepUp
             return true;
         }
         $at = (int) session(self::SESSION_KEY, 0);
+        $ttl = (int) config('legacy.stepup.ttl_seconds');
 
-        return $at > 0 && time() - $at < (int) config('legacy.stepup.ttl_seconds');
+        // ttl 0: one verification lasts the sign-in session, which is bounded by idle and absolute session limits.
+        return $at > 0 && ($ttl <= 0 || time() - $at < $ttl);
     }
 
     public static function require(): void

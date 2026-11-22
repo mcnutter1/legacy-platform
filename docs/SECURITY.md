@@ -21,7 +21,7 @@ access grants, OAuth tokens, `APP_KEY`, `VAULT_ROOT_KEY`, backup key, DB credent
 | Over-broad family visibility | Deny-by-default grants; admins get nothing implicitly; expiry; steward approval | `…administrators_get_no_implicit…`, `…expired_grants…` |
 | Sensitive field leakage via list/aggregate/export | Registry `sensitive` redaction; aggregates computed over constrained rows; report redaction options | `…redact_sensitive_fields` |
 | Session theft / stale SSO | `__Host-` cookie, Secure, HttpOnly, SameSite=Lax, encrypted session; 5-min revalidation; 12 h absolute; fail closed | — |
-| Privileged action by hijacked session | Fresh central revalidation + TOTP step-up (10 min) for grants, invites, approvals, exports, legal hold, purge | `…privileged_actions_require_step_up` |
+| Privileged action by hijacked session | Fresh central revalidation + TOTP step-up (once per sign-in session by owner decision, bounded by the 60-minute idle and 12-hour absolute session limits; set `STEPUP_TTL_SECONDS` to re-ask more often) for grants, invites, approvals, exports, legal hold, purge | `…privileged_actions_require_step_up` |
 | CSRF | Laravel CSRF on web + API (same-origin header); OAuth/MCP endpoints use bearer/PKCE instead | — |
 | Replay / double submit | Idempotency keys bound to request hash; `If-Match` versions | `IdempotencyAndConcurrencyTest` |
 | OAuth code/token theft | PKCE S256 only; 60 s single-use codes; audience-bound tokens; refresh rotation + family revocation on reuse; redirect host allow-list | `OAuthMcpTest` |

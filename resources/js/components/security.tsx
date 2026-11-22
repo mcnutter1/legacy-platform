@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, onApiError, ApiError } from '../api/client';
 import { useJob } from '../api/hooks';
 import type { Job, Me } from '../api/types';
@@ -67,10 +67,20 @@ export function SecurityPrompts() {
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const qc = useQueryClient();
-  const enrolled = qc.getQueryData<Me>(['me'])?.user.stepup_enrolled ?? true;
+  const me = useQuery<Me>({ queryKey: ['me'], queryFn: () => api<{ data: Me }>('me').then((r) => r.data), staleTime: 30_000 });
+  const enrolled = me.data?.user.stepup_enrolled ?? true;
+  const [atLogin, setAtLogin] = useState(false);
+  // Ask once right after sign-in so privileged actions don't interrupt later in the session.
+  useEffect(() => {
+    const m = me.data;
+    if (m && m.stepup.required && m.user.stepup_enrolled && !m.stepup.fresh && !sessionStorage.getItem('stepup-asked')) {
+      sessionStorage.setItem('stepup-asked', '1');
+      setAtLogin(true); setStepup(true); setDone(false); setCode(''); setErr(null);
+    }
+  }, [me.data]);
   useEffect(() => onApiError((e) => {
-    if (e.code === 'step_up_required') { setStepup(true); setDone(false); setCode(''); setErr(null); }
-    if (e.status === 401 || e.code === 'csrf') setEnded(true);
+    if (e.code === 'step_up_required') { setAtLogin(false); setStepup(true); setDone(false); setCode(''); setErr(null); }
+    if (e.status === 401 || e.code === 'csrf') { sessionStorage.removeItem('stepup-asked'); setEnded(true); }
   }), []);
   const submit = async (ev: FormEvent) => {
     ev.preventDefault();
@@ -87,7 +97,7 @@ export function SecurityPrompts() {
       <Dialog open={stepup} onClose={() => setStepup(false)} title={enrolled ? "Confirm it's you" : 'Set up your authenticator'} wide={!enrolled && !done}>
         {done ? (
           <div className="space-y-4">
-            <Notice tone="success">Verified for the next 10 minutes. Repeat the action to continue.</Notice>
+            <Notice tone="success">Verified for this sign-in. You won't be asked again until you sign out or your session ends.{atLogin ? '' : ' Repeat the action to continue.'}</Notice>
             <div className="flex justify-end"><button className="btn-primary" onClick={() => setStepup(false)}>Continue</button></div>
           </div>
         ) : !enrolled ? (
@@ -97,7 +107,7 @@ export function SecurityPrompts() {
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
-            <p className="text-sm text-muted">This action changes access, approvals or exports. Enter the 6-digit code from your authenticator app.</p>
+            <p className="text-sm text-muted">{atLogin ? 'Confirm your sign-in with the 6-digit code from your authenticator app. You won\'t be asked again during this session.' : 'This action changes access, approvals or exports. Enter the 6-digit code from your authenticator app.'}</p>
             <label className="field"><span>Authenticator code</span>
               <input inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} required autoFocus />
             </label>

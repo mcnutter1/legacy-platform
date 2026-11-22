@@ -87,6 +87,24 @@ class VaultController extends ApiController
         return $this->ok(['rejected' => true]);
     }
 
+    /** Attach an uploaded document as the paper copy of values provided by a connected assistant. */
+    public function attachExtractionCopy(Request $r, ExtractionService $svc, string $extraction): JsonResponse
+    {
+        $ctx = $this->ctx();
+        $d = $this->validated($r, ['document_id' => 'required|string|max:26']);
+        $ex = DB::table('document_extractions')->where('workspace_id', $ctx->workspace->id)->where('id', $extraction)->first();
+        $doc = $ctx->constrain(DB::table('documents'), 'vault', 'read')->where('id', $d['document_id'])->whereNull('archived_at')->first();
+        if (! $ex || ! $ctx->can('vault', 'write', $ex->scope_id) || ! $doc) {
+            throw ApiError::notFound();
+        }
+        if ($ex->document_id) {
+            throw ApiError::conflict('A copy is already attached.');
+        }
+        $svc->attachCopy($ex->id, ['document_id' => $doc->id, 'version_id' => $doc->current_version_id]);
+
+        return $this->ok(['attached' => true, 'document_id' => $doc->id]);
+    }
+
     public function releaseQuarantine(string $document): JsonResponse
     {
         $this->privileged();

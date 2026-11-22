@@ -4590,6 +4590,43 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/vault/extractions/{extraction}/attach-copy": {
+            "post": {
+                "operationId": "post_workspaces_workspace_vault_extractions_extraction_attach_copy",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "extraction",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/vault/extractions/{extraction}/reject": {
             "post": {
                 "operationId": "post_workspaces_workspace_vault_extractions_extraction_reject",

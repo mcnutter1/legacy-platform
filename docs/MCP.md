@@ -20,8 +20,16 @@ authenticator → choose the workspace and permissions. Disconnect any time in L
 
 ## Tools
 `get_net_worth`, `list_accounts`, `get_portfolio`, `get_tax_estimate`, `get_plan_summary`, `run_plan_scenario`,
-`get_job_status`, `search_documents`, `list_alerts`, `list_employments`, `start_paystub_intake`, `get_intake_status`,
-`propose_record_change`. Tools outside the granted scopes are not listed and cannot be called. Every call is audited.
+`get_job_status`, `search_documents`, `list_alerts`, `list_employments`, `start_paystub_intake`, `submit_paystub_values`,
+`get_intake_status`, `propose_record_change`. Tools outside the granted scopes are not listed and cannot be called. Every call is audited.
+
+### Paystubs from an assistant
+When the assistant can read a paystub the user shared, `submit_paystub_values` sends the pay date, period and each line's
+current/YTD amounts. Legacy runs the same arithmetic checks as extraction (net vs. gross − deductions, YTD progression,
+duplicate pay date) and creates a draft (`engine = assistant`) in the Review inbox at `/w/{workspace}/extractions/{id}`.
+A paper copy is optional: send it as `file_base64`, or the user attaches it later via the returned 24-hour link or on
+the draft page. The file is virus-scanned and stored as evidence; it is not re-extracted. Nothing changes payroll until
+the user approves the values in the app.
 
 ## Guarantees
 - Read results are summaries with `as_of` dates; nothing the connector does changes records without approval in the app.

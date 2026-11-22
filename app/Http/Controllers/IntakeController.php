@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\JobService;
 use App\Models\Membership;
+use App\Services\Documents\ExtractionService;
 use App\Services\VaultService;
 use App\Support\AccessContext;
 use App\Support\ApiError;
@@ -15,7 +16,7 @@ class IntakeController extends Controller
 {
     private function link(Request $r, string $token): array
     {
-        $link = DB::table('upload_links')->where('token_hash', hash('sha256', $token))->where('purpose', 'paystub')->first();
+        $link = DB::table('upload_links')->where('token_hash', hash('sha256', $token))->whereIn('purpose', ['paystub', 'paystub_copy'])->first();
         if (! $link || $link->used_at || now()->greaterThan($link->expires_at)) {
             abort(404);
         }
@@ -35,9 +36,9 @@ class IntakeController extends Controller
 
     public function show(Request $r, string $token)
     {
-        [, , $emp] = $this->link($r, $token);
+        [$link, , $emp] = $this->link($r, $token);
 
-        return view('public.intake', ['employer' => $emp->employer_name, 'token' => $token]);
+        return view('public.intake', ['employer' => $emp->employer_name, 'token' => $token, 'copy' => $link->purpose === 'paystub_copy']);
     }
 
     public function store(Request $r, VaultService $vault, JobService $jobs, string $token)
@@ -51,11 +52,20 @@ class IntakeController extends Controller
         } catch (ApiError $e) {
             return back()->withErrors(['file' => $e->getMessage()]);
         }
+        $reviewUrl = url('/w/'.$ctx->workspace->id.'/review');
+        if ($link->purpose === 'paystub_copy') {
+            // Values were already provided by the assistant; the file is the paper copy, not something to extract.
+            $extractionId = (string) ((json_decode((string) $link->context, true) ?: [])['extraction_id'] ?? '');
+            app(ExtractionService::class)->attachCopy($extractionId, $stored);
+            DB::table('upload_links')->where('token_hash', $link->token_hash)->update(['used_at' => now()]);
+
+            return view('public.intake-done', ['reviewUrl' => url('/w/'.$ctx->workspace->id.'/extractions/'.$extractionId), 'copy' => true]);
+        }
         $jobs->enqueue($ctx, 'document.extract', ['document_id' => $stored['document_id'], 'schema' => 'paystub', 'employment_id' => $emp->id,
             'client_provenance' => 'upload_link'], 'document', $stored['document_id'], $emp->scope_id, 120);
         DB::table('upload_links')->where('token_hash', $link->token_hash)->update(['used_at' => now(), 'draft_id' => $stored['document_id']]);
         DB::table('upload_links')->where('purpose', 'paystub_mcp_key')->where('context', 'like', '%'.$link->token_hash.'%')->update(['draft_id' => $stored['document_id']]);
 
-        return view('public.intake-done', ['reviewUrl' => url('/review')]);
+        return view('public.intake-done', ['reviewUrl' => $reviewUrl, 'copy' => false]);
     }
 }

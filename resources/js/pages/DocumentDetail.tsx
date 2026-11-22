@@ -12,7 +12,7 @@ type Field = { current?: string | null; ytd?: string | null; value?: string | nu
 const OPEN = new Set(['clean', 'ready']);
 const flagList = (f: Record<string, unknown> | null) => Object.entries(f ?? {}).filter(([k, v]) => v === true && k !== 'pages').map(([k]) => humanize(k));
 
-function ExtractionReview({ ex }: { ex: AnyRecord }) {
+export function ExtractionReview({ ex }: { ex: AnyRecord }) {
   const employments = useResourceList('employments', { limit: 100 });
   const fields = (ex.fields ?? {}) as Record<string, Field>;
   const [emp, setEmp] = useState(String(ex.target_id ?? ''));
@@ -31,7 +31,7 @@ function ExtractionReview({ ex }: { ex: AnyRecord }) {
     );
   }
   return (
-    <Card title="Paystub extraction" subtitle={`${humanize(String(ex.engine))}${ex.model ? ` · ${ex.model}` : ''}`} actions={<StatusBadge status={String(ex.status)} />}>
+    <Card title="Paystub extraction" subtitle={ex.engine === 'assistant' ? `Values provided by ${String(ex.model ?? 'a connected app')}` : `${humanize(String(ex.engine))}${ex.model ? ` · ${ex.model}` : ''}`} actions={<StatusBadge status={String(ex.status)} />}>
       {ex.status === 'needs_review' ? (
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); approve.mutate({ employment_id: emp, fields: vals, run_kind: runKind, acknowledge_checks: ack }); }}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -49,7 +49,7 @@ function ExtractionReview({ ex }: { ex: AnyRecord }) {
                     <td>{humanize(k)}</td>
                     <td><input aria-label={`${k} current`} className="input min-h-9 w-32" inputMode="decimal" defaultValue={f.current ?? ''} onChange={(e) => setVals({ ...vals, [k]: { ...v, current: e.target.value } })} /></td>
                     <td><input aria-label={`${k} year to date`} className="input min-h-9 w-32" inputMode="decimal" defaultValue={f.ytd ?? ''} onChange={(e) => setVals({ ...vals, [k]: { ...v, ytd: e.target.value } })} /></td>
-                    <td className="text-xs text-muted">p.{f.page} · {Math.round(f.confidence * 100)}% {f.quote && <q className="block max-w-xs truncate">{f.quote}</q>}</td>
+                    <td className="text-xs text-muted">{ex.engine === 'assistant' ? f.quote : <>p.{f.page} · {Math.round(f.confidence * 100)}% {f.quote && <q className="block max-w-xs truncate">{f.quote}</q>}</>}</td>
                   </tr>
                 );
               })}</tbody>

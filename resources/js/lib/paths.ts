@@ -13,6 +13,8 @@ const DETAIL: Record<string, (id: string) => string> = {
   estate_run: (id) => `estate/runs/${id}`,
   documents: (id) => `vault/${id}`,
   document: (id) => `vault/${id}`,
+  document_extraction: (id) => `extractions/${id}`,
+  document_extractions: (id) => `extractions/${id}`,
   import_batches: (id) => `imports/${id}`,
   import_batch: (id) => `imports/${id}`,
 };

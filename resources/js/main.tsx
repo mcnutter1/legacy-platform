@@ -75,6 +75,7 @@ const router = createBrowserRouter([
       { path: 'governance', element: page(() => import('./pages/Governance')) },
       { path: 'vault', element: page(() => import('./pages/Vault')) },
       { path: 'vault/:id', element: page(() => import('./pages/DocumentDetail')) },
+      { path: 'extractions/:id', element: page(() => import('./pages/ExtractionDetail')) },
       { path: 'reports', element: page(() => import('./pages/Reports')) },
       { path: 'access', element: page(() => import('./pages/Access')) },
       { path: 'settings', element: page(() => import('./pages/Settings')) },

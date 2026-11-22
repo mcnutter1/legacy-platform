@@ -54,9 +54,25 @@ final class McpServer
                 'description' => 'Your unread notifications and upcoming due items.',
                 'inputSchema' => ['type' => 'object', 'properties' => [], 'additionalProperties' => false]],
             ['name' => 'start_paystub_intake', 'scope' => 'payroll.intake.write', 'title' => 'Start paystub intake', 'readOnly' => false,
-                'description' => 'Create a draft paystub intake for an employment record. Returns a short-lived first-party upload link (or accepts the file when attachment forwarding is enabled). Values are confirmed by you in the app before they change payroll.',
+                'description' => 'Create a draft paystub intake for an employment record when you cannot read the paystub yourself. Returns a short-lived first-party upload link (or accepts the file as base64). If you can read the paystub, prefer submit_paystub_values. Values are confirmed by the user in the app before they change payroll.',
                 'inputSchema' => ['type' => 'object', 'properties' => ['employment_id' => ['type' => 'string'], 'idempotency_key' => ['type' => 'string', 'minLength' => 8, 'maxLength' => 64],
                     'file_base64' => ['type' => 'string'], 'filename' => ['type' => 'string']], 'required' => ['employment_id', 'idempotency_key'], 'additionalProperties' => false]],
+            ['name' => 'submit_paystub_values', 'scope' => 'payroll.intake.write', 'title' => 'Submit paystub values', 'readOnly' => false,
+                'description' => 'Submit the values you read from a paystub the user shared: pay date, pay period, and for each line the this-period (current) and year-to-date (ytd) amounts. '
+                    .'Copy amounts exactly as printed (deductions as positive numbers) and omit lines that are not on the stub. Creates a draft in the user\'s Review inbox with arithmetic checks; '
+                    .'nothing changes payroll until they approve it in the app. Include the paystub file as file_base64 + filename to keep a paper copy, otherwise an optional upload link for the copy is returned.',
+                'inputSchema' => ['type' => 'object', 'properties' => [
+                    'employment_id' => ['type' => 'string', 'description' => 'From list_employments.'],
+                    'idempotency_key' => ['type' => 'string', 'minLength' => 8, 'maxLength' => 64],
+                    'values' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['pay_date', 'gross'], 'properties' => [
+                        'pay_date' => ['type' => 'string', 'format' => 'date'], 'period_start' => ['type' => 'string', 'format' => 'date'], 'period_end' => ['type' => 'string', 'format' => 'date'],
+                        'employer' => ['type' => 'string', 'maxLength' => 120],
+                    ] + array_fill_keys(\App\Services\PayrollService::AMOUNT_FIELDS, ['type' => 'object', 'additionalProperties' => false,
+                        'properties' => ['current' => ['type' => ['string', 'number']], 'ytd' => ['type' => ['string', 'number']]]])],
+                    'run_kind' => ['type' => 'string', 'enum' => ['regular', 'off_cycle', 'bonus', 'correction', 'final', 'equity']],
+                    'file_base64' => ['type' => 'string', 'description' => 'Optional paper copy (PDF or image), base64-encoded, max 10 MB.'],
+                    'filename' => ['type' => 'string', 'maxLength' => 120],
+                ], 'required' => ['employment_id', 'idempotency_key', 'values'], 'additionalProperties' => false]],
             ['name' => 'list_employments', 'scope' => 'payroll.intake.write', 'title' => 'Payroll profiles', 'readOnly' => true,
                 'description' => 'Employment records you can submit paystubs for.',
                 'inputSchema' => ['type' => 'object', 'properties' => [], 'additionalProperties' => false]],
@@ -105,6 +121,7 @@ final class McpServer
             'list_alerts' => $this->alerts(),
             'list_employments' => $this->employments(),
             'start_paystub_intake' => $this->paystubIntake($args),
+            'submit_paystub_values' => $this->paystubValues($args),
             'get_intake_status' => $this->intakeStatus((string) $args['draft_id']),
             'propose_record_change' => $this->propose($args),
         };
@@ -252,8 +269,123 @@ final class McpServer
             'note' => 'Open the link while signed in to McNutt Legacy to upload or photograph the paystub.'];
     }
 
+    private function paystubValues(array $a): array
+    {
+        $emp = $this->ctx->constrain(DB::table('employments'), 'compensation', 'write')->where('id', (string) $a['employment_id'])->whereNull('archived_at')->first();
+        if (! $emp || ! $this->ctx->can('vault', 'write', $emp->scope_id)) {
+            throw ApiError::forbidden('You cannot submit paystubs for that employment.');
+        }
+        $key = 'mcp-values:'.$this->ctx->membership->id.':'.hash('sha256', (string) $a['idempotency_key']);
+        if ($existing = DB::table('upload_links')->where('workspace_id', $this->ctx->workspace->id)->where('token_hash', hash('sha256', $key))->first()) {
+            return ['draft_id' => $existing->draft_id, 'status' => 'existing', 'review_url' => $this->extractionUrl((string) $existing->draft_id), 'note' => 'This idempotency key was already used.'];
+        }
+        $v = (array) ($a['values'] ?? []);
+        $client = ($this->ctx->clientId ? DB::table('oauth_clients')->where('client_id', $this->ctx->clientId)->value('name') : null) ?: 'a connected app';
+        $evidence = ['confidence' => 0.9, 'page' => 1, 'quote' => 'Read by '.mb_substr($client, 0, 60)];
+        $date = fn ($x) => is_string($x) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $x) && checkdate((int) substr($x, 5, 2), (int) substr($x, 8, 2), (int) substr($x, 0, 4)) ? $x : null;
+        $payDate = $date($v['pay_date'] ?? null);
+        if (! $payDate) {
+            throw new ApiError('validation_failed', 'values.pay_date (YYYY-MM-DD) is required.', 422);
+        }
+        $fields = ['pay_date' => ['value' => $payDate] + $evidence];
+        foreach (['period_start', 'period_end'] as $k) {
+            if ($d = $date($v[$k] ?? null)) {
+                $fields[$k] = ['value' => $d] + $evidence;
+            }
+        }
+        if (is_string($v['employer'] ?? null) && trim($v['employer']) !== '') {
+            $fields['employer'] = ['value' => mb_substr(trim($v['employer']), 0, 120)] + $evidence;
+        }
+        $current = [];
+        $ytd = [];
+        $bad = [];
+        foreach (\App\Services\PayrollService::AMOUNT_FIELDS as $k) {
+            if (! isset($v[$k])) {
+                continue;
+            }
+            $x = is_array($v[$k]) ? $v[$k] : ['current' => $v[$k]];
+            $c = self::amount($x['current'] ?? null);
+            $y = self::amount($x['ytd'] ?? null);
+            if ((($x['current'] ?? '') !== '' && $c === null) || (($x['ytd'] ?? '') !== '' && $y === null)) {
+                $bad[] = $k;
+
+                continue;
+            }
+            if ($c === null && $y === null) {
+                continue;
+            }
+            $fields[$k] = ['current' => $c, 'ytd' => $y] + $evidence;
+            $c !== null && $current[$k] = $c;
+            $y !== null && $ytd[$k] = $y;
+        }
+        if ($bad) {
+            throw new ApiError('validation_failed', 'These amounts are not plain numbers: '.implode(', ', $bad).'. Use digits with an optional decimal point.', 422);
+        }
+        if (! isset($current['gross'])) {
+            throw new ApiError('validation_failed', 'values.gross.current is required.', 422);
+        }
+        $runKind = in_array($a['run_kind'] ?? 'regular', ['regular', 'off_cycle', 'bonus', 'correction', 'final', 'equity'], true) ? ($a['run_kind'] ?? 'regular') : 'regular';
+        $checks = app(\App\Services\PayrollService::class)->checks($emp->id, $payDate, $current, $ytd, $runKind);
+        $stored = null;
+        if (! empty($a['file_base64'])) {
+            $bytes = base64_decode((string) $a['file_base64'], true);
+            if ($bytes === false || $bytes === '' || strlen($bytes) > 10 * 1024 * 1024) {
+                throw new ApiError('invalid_file', 'file_base64 must be valid base64 under 10 MB.', 422);
+            }
+            $stored = app(\App\Services\VaultService::class)->store($this->ctx, $bytes, ['scope_id' => $emp->scope_id,
+                'filename' => basename((string) ($a['filename'] ?? 'paystub.pdf')) ?: 'paystub.pdf', 'title' => 'Paystub '.$payDate.' — '.$emp->employer_name, 'doc_type' => 'paystub', 'origin' => 'mcp']);
+        }
+        $res = app(\App\Services\Documents\ExtractionService::class)->recordProvided($this->ctx, $emp, $fields, $checks, $client, $stored);
+        DB::table('upload_links')->insert(['token_hash' => hash('sha256', $key), 'workspace_id' => $this->ctx->workspace->id, 'membership_id' => $this->ctx->membership->id,
+            'purpose' => 'paystub_mcp_key', 'draft_id' => $res['extraction_id'], 'expires_at' => now()->addDay(), 'used_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $copy = ['status' => 'attached', 'note' => 'The copy is virus-scanned before it can be opened.'];
+        if (! $stored) {
+            $token = Str::random(40);
+            DB::table('upload_links')->insert(['token_hash' => hash('sha256', $token), 'workspace_id' => $this->ctx->workspace->id, 'membership_id' => $this->ctx->membership->id,
+                'purpose' => 'paystub_copy', 'context' => json_encode(['employment_id' => $emp->id, 'extraction_id' => $res['extraction_id'], 'client' => $this->ctx->clientId]),
+                'expires_at' => now()->addDay(), 'created_at' => now(), 'updated_at' => now()]);
+            $copy = ['status' => 'not_attached', 'optional_upload_url' => url('/u/'.$token), 'expires_in_hours' => 24,
+                'note' => 'Optional: the user can open this link while signed in to attach the paystub PDF or a photo as the paper copy.'];
+        }
+
+        return ['draft_id' => $res['extraction_id'], 'status' => 'awaiting_review', 'review_url' => $this->extractionUrl($res['extraction_id']),
+            'checks' => array_map(fn ($c) => ['check' => $c['check'], 'passed' => $c['passed'], 'message' => $c['message']], $checks), 'paper_copy' => $copy,
+            'note' => 'Nothing changes payroll or tax estimates until the user approves these values in McNutt Legacy. If a check failed, re-read the stub; submit corrected values with a new idempotency key.'];
+    }
+
+    private static function amount(mixed $x): ?string
+    {
+        if (is_int($x) || is_float($x)) {
+            return \App\Support\Dec::norm(sprintf('%.2f', $x));
+        }
+        if (! is_string($x) || trim($x) === '') {
+            return null;
+        }
+        $s = str_replace(['$', ',', ' '], '', trim($x));
+        if (preg_match('/^\((\d+(\.\d+)?)\)$/', $s, $m)) {
+            $s = '-'.$m[1];
+        }
+
+        return preg_match('/^-?\d{1,12}(\.\d{1,4})?$/', $s) ? \App\Support\Dec::norm($s) : null;
+    }
+
+    private function extractionUrl(string $id): string
+    {
+        return url('/w/'.$this->ctx->workspace->id.'/extractions/'.$id);
+    }
+
     private function intakeStatus(string $draftId): array
     {
+        $provided = Str::isUlid($draftId) ? DB::table('document_extractions')->where('workspace_id', $this->ctx->workspace->id)->where('id', $draftId)->first() : null;
+        if ($provided) {
+            if (! $this->ctx->can('vault', 'read', $provided->scope_id)) {
+                throw ApiError::notFound();
+            }
+            $snap = $provided->target_type === 'payroll_snapshot' ? DB::table('payroll_snapshots')->find($provided->target_id) : null;
+
+            return ['draft_id' => $provided->id, 'extraction_status' => $provided->status, 'payroll_status' => $snap?->status, 'paper_copy_attached' => (bool) $provided->document_id,
+                'review_url' => $this->extractionUrl($provided->id), 'note' => $snap ? 'Approved; a fresh tax forecast was queued.' : 'Awaiting the user\'s confirmation in the app.'];
+        }
         $doc = DB::table('documents')->where('workspace_id', $this->ctx->workspace->id)->where('id', $draftId)->first();
         if (! $doc) {
             $link = DB::table('upload_links')->where('workspace_id', $this->ctx->workspace->id)->where('token_hash', $draftId)->where('membership_id', $this->ctx->membership->id)->first();

@@ -135,6 +135,7 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::post('/vault/documents/{document}/purge', [VaultController::class, 'purge']);
         Route::post('/vault/extractions/{extraction}/approve-paystub', [VaultController::class, 'approvePaystub']);
         Route::post('/vault/extractions/{extraction}/reject', [VaultController::class, 'rejectExtraction']);
+        Route::post('/vault/extractions/{extraction}/attach-copy', [VaultController::class, 'attachExtractionCopy'])->where('extraction', $ulid);
         Route::post('/imports', [VaultController::class, 'importUpload']);
         Route::get('/imports/{batch}', [VaultController::class, 'importShow']);
         Route::get('/imports/{batch}/rows', [VaultController::class, 'importRows']);

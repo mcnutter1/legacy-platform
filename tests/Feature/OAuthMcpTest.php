@@ -130,6 +130,49 @@ class OAuthMcpTest extends TestCase
         $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'get_tax_estimate', 'arguments' => ['tax_year' => 2025]])->assertJsonPath('error.code', -32602);
     }
 
+    public function test_assistant_can_submit_paystub_values_with_optional_copy_for_review(): void
+    {
+        [$tokens, , $ws, $joint] = $this->connect(['payroll.intake.write']);
+        $person = (string) Str::ulid();
+        $emp = (string) Str::ulid();
+        DB::table('persons')->insert(['id' => $person, 'workspace_id' => $ws->id, 'scope_id' => $joint->id, 'display_name' => 'Example Earner', 'created_at' => now(), 'updated_at' => now(), 'edit_version' => 1]);
+        DB::table('employments')->insert(['id' => $emp, 'workspace_id' => $ws->id, 'scope_id' => $joint->id, 'person_id' => $person, 'employer_name' => 'Example Corp',
+            'pay_frequency' => 'biweekly', 'created_at' => now(), 'updated_at' => now(), 'edit_version' => 1]);
+        $call = fn (array $args) => $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'submit_paystub_values', 'arguments' => $args])->assertOk();
+        $values = ['pay_date' => '2026-11-13', 'period_start' => '2026-10-27', 'period_end' => '2026-11-09', 'employer' => 'Example Corp',
+            'gross' => ['current' => '5,000.00', 'ytd' => 110000], 'federal_withholding' => ['current' => '800.00'], 'social_security' => ['current' => 310],
+            'medicare' => ['current' => '72.50'], 'net' => ['current' => '3817.50']];
+
+        $call(['employment_id' => $emp, 'idempotency_key' => 'bad-values-1', 'values' => ['pay_date' => '2026-11-13', 'gross' => ['current' => 'five']]])
+            ->assertJsonPath('result.isError', true);
+        $out = $call(['employment_id' => $emp, 'idempotency_key' => 'stub-2026-11-13', 'values' => $values])->assertJsonPath('result.isError', false)->json('result.structuredContent');
+        $this->assertSame(['awaiting_review', 'not_attached'], [$out['status'], $out['paper_copy']['status']]);
+        $this->assertTrue(collect($out['checks'])->firstWhere('check', 'net_components')['passed']);
+        $ex = DB::table('document_extractions')->find($out['draft_id']);
+        $this->assertSame(['assistant', 'needs_review', null, 'Test client'], [$ex->engine, $ex->status, $ex->document_id, $ex->model]);
+        $fields = json_decode($ex->fields, true);
+        $this->assertSame(['5000', '110000'], [rtrim(rtrim($fields['gross']['current'], '0'), '.'), rtrim(rtrim($fields['gross']['ytd'], '0'), '.')]);
+        $this->assertSame(1, DB::table('review_items')->where('subject_id', $ex->id)->where('kind', 'extraction_review')->count());
+        $this->assertSame(0, DB::table('payroll_snapshots')->count(), 'nothing changes until approved in the app');
+        $again = $call(['employment_id' => $emp, 'idempotency_key' => 'stub-2026-11-13', 'values' => $values])->json('result.structuredContent');
+        $this->assertSame(['existing', $ex->id], [$again['status'], $again['draft_id']]);
+        $status = $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'get_intake_status', 'arguments' => ['draft_id' => $ex->id]])->json('result.structuredContent');
+        $this->assertSame(['needs_review', false], [$status['extraction_status'], $status['paper_copy_attached']]);
+
+        // The optional link attaches the paper copy to the same draft instead of starting a new extraction.
+        $token = basename((string) parse_url($out['paper_copy']['optional_upload_url'], PHP_URL_PATH));
+        $u = \App\Models\User::whereHas('memberships', fn ($q) => $q->where('workspace_id', $ws->id))->first() ?? \App\Models\User::first();
+        $this->signIn($u)->get('/u/'.$token)->assertOk()->assertSee('Attach the paystub copy');
+        $pdf = \Illuminate\Http\UploadedFile::fake()->createWithContent('stub.pdf', "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
+        $this->signIn($u)->post('/u/'.$token, ['file' => $pdf])->assertOk()->assertSee('Review the values');
+        $this->assertNotNull(DB::table('document_extractions')->where('id', $ex->id)->value('document_id'));
+        $this->assertSame(0, DB::table('compute_jobs')->where('type', 'document.extract')->count());
+
+        // Approving in the app creates the paycheck from the provided values.
+        $this->signIn($u)->send('POST', $this->wsUrl($ws, "vault/extractions/{$ex->id}/approve-paystub"), ['employment_id' => $emp])->assertCreated();
+        $this->assertEquals(5000, (float) DB::table('payroll_snapshots')->value('gross'));
+    }
+
     public function test_every_tool_schema_is_a_json_object_schema(): void
     {
         [$tokens] = $this->connect(array_keys(\App\Services\Mcp\OAuthService::SCOPES));

@@ -68,6 +68,43 @@ final class ExtractionService
         return ['extraction_id' => $id, 'status' => $status];
     }
 
+    /**
+     * Paystub values read by a connected assistant (e.g. Claude) rather than by our extractor. They land as a draft
+     * extraction in the Review inbox exactly like extracted values; a paper copy can be attached now or later.
+     */
+    public function recordProvided(AccessContext $ctx, object $emp, array $fields, array $checks, string $client, ?array $stored): array
+    {
+        $id = (string) Str::ulid();
+        DB::table('document_extractions')->insert([
+            'id' => $id, 'workspace_id' => $ctx->workspace->id, 'scope_id' => $emp->scope_id, 'document_id' => $stored['document_id'] ?? null, 'version_id' => $stored['version_id'] ?? null,
+            'schema' => 'paystub', 'schema_version' => 1, 'engine' => 'assistant', 'model' => mb_substr($client, 0, 120), 'status' => 'needs_review',
+            'fields' => json_encode($fields), 'checks' => json_encode($checks), 'target_type' => 'employment', 'target_id' => $emp->id,
+            'client_provenance' => 'mcp:'.mb_substr($client, 0, 100), 'created_by' => $ctx->user->id, 'created_at' => now(), 'updated_at' => now(), 'edit_version' => 1,
+        ]);
+        DB::table('review_items')->insertOrIgnore([
+            'id' => (string) Str::ulid(), 'workspace_id' => $ctx->workspace->id, 'scope_id' => $emp->scope_id, 'domain' => 'vault', 'kind' => 'extraction_review',
+            'subject_type' => 'document_extraction', 'subject_id' => $id, 'title' => 'Confirm paystub values from '.mb_substr($client, 0, 60).' — '.$emp->employer_name,
+            'reason' => 'A connected assistant read these values from your paystub. Compare them with the '.($stored ? 'attached copy' : 'paystub (attach a copy if you like)').' before approving.',
+            'evidence' => json_encode(['document_id' => $stored['document_id'] ?? null, 'checks' => $checks, 'provided_by' => $client]),
+            'severity' => collect($checks)->contains(fn ($c) => ! ($c['passed'] ?? true)) ? 'high' : 'normal',
+            'status' => 'open', 'dedup_key' => 'extraction:'.$id, 'created_at' => now(), 'updated_at' => now(), 'edit_version' => 1,
+        ]);
+        Audit::log('payroll.values_provided', 'document_extraction', $id, ['client' => $client, 'with_copy' => (bool) $stored], scopeId: $emp->scope_id);
+
+        return ['extraction_id' => $id, 'status' => 'needs_review'];
+    }
+
+    /** Attach an uploaded paper copy to an extraction that was created from provided values. */
+    public function attachCopy(string $extractionId, array $stored): void
+    {
+        DB::table('document_extractions')->where('id', $extractionId)->whereNull('document_id')
+            ->update(['document_id' => $stored['document_id'], 'version_id' => $stored['version_id'], 'updated_at' => now()]);
+        $item = DB::table('review_items')->where('dedup_key', 'extraction:'.$extractionId)->first();
+        if ($item) {
+            DB::table('review_items')->where('id', $item->id)->update(['evidence' => json_encode(['document_id' => $stored['document_id']] + (json_decode((string) $item->evidence, true) ?: [])), 'updated_at' => now()]);
+        }
+    }
+
     /** OpenAI Responses API with a strict JSON schema; document text is data, never instructions. */
     public function extractWithProvider(AccessContext $ctx, object $doc, object $version, string $schema): array
     {

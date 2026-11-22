@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — paystub values from assistants
+
+### Implemented
+- MCP tool `submit_paystub_values`: an assistant that can read the paystub (e.g. Claude) submits pay date, period and
+  current/YTD amounts; Legacy runs the payroll checks and creates a review draft. Optional paper copy as base64, via a
+  24-hour link, or attached on the new draft page (`extractions/{id}`). Approval still happens only in the app.
+
 ## Unreleased — hide, ignore and de-duplicate accounts
 
 ### Implemented

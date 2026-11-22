@@ -1,8 +1,8 @@
 @extends('layouts.public')
 @section('title', 'Upload paystub')
 @section('content')
-    <h1 class="font-serif text-2xl">Upload a paystub</h1>
-    <p class="mt-2 text-sm text-muted">For {{ $employer }}. Take a photo or choose a PDF. Nothing changes until you confirm the extracted values in McNutt Legacy.</p>
+    <h1 class="font-serif text-2xl">{{ $copy ? 'Attach the paystub copy' : 'Upload a paystub' }}</h1>
+    <p class="mt-2 text-sm text-muted">For {{ $employer }}. Take a photo or choose a PDF. {{ $copy ? 'The values were already submitted; this file is kept as the paper copy so you can compare before approving.' : 'Nothing changes until you confirm the extracted values in McNutt Legacy.' }}</p>
     <form method="post" action="/u/{{ $token }}" enctype="multipart/form-data" class="mt-6 space-y-4">
         @csrf
         <label class="field"><span>Paystub</span><input type="file" name="file" accept="application/pdf,image/*" capture="environment" required></label>

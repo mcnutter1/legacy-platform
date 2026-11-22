@@ -67,8 +67,7 @@ WH="$STAGE/app/runners/wheelhouse"
 mkdir -p "$WH"
 "$PY" -m pip download --quiet --only-binary=:all: --platform manylinux2014_x86_64 --platform manylinux_2_17_x86_64 --platform manylinux_2_28_x86_64 \
   --python-version 3.12 --implementation cp --abi cp312 -r runners/requirements.lock -d "$WH" || die "wheel download failed"
-"$PY" -m pip wheel --quiet --no-deps --no-build-isolation runners -w "$WH" 2>/dev/null \
-  || "$PY" -m pip wheel --quiet --no-deps runners -w "$WH" || die "legacy_runners wheel build failed"
+"$PY" -m pip wheel --quiet --no-deps ./runners -w "$WH" || die "legacy_runners wheel build failed"
 ls "$WH"/legacy_runners-*.whl >/dev/null || die "legacy_runners wheel missing"
 
 echo "$RELEASE" > "$STAGE/app/RELEASE"

@@ -58,6 +58,7 @@ const router = createBrowserRouter([
       { path: 'year-close', element: page(() => import('./pages/YearClose')) },
       { path: 'payroll', element: page(() => import('./pages/Payroll')) },
       { path: 'business-income', element: page(() => import('./pages/BusinessIncome')) },
+      { path: 'schedules', element: page(() => import('./pages/Schedules')) },
       { path: 'equity', element: page(() => import('./pages/Equity')) },
       { path: 'equity/:id', element: page(() => import('./pages/EquityGrant')) },
       { path: 'tax', element: page(() => import('./pages/Tax')) },

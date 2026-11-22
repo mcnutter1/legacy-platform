@@ -37,11 +37,17 @@ class IntegrationSyncHandler implements JobHandler
             default => new SyncService($ctx),
         };
         try {
-            return ['_done' => ! empty($job->params['dry_run']) ? $svc->preview($c) : $svc->sync($c)];
+            if (! empty($job->params['dry_run'])) {
+                return ['_done' => $svc->preview($c)];
+            }
+            $out = $svc->sync($c);
+            DB::table('source_connections')->where('id', $c->id)->update(['next_sync_at' => now()->addHours(max(1, (int) $c->sync_interval_hours))]);
+
+            return ['_done' => $out];
         } catch (IntegrationError $e) {
             DB::table('source_connections')->where('id', $c->id)->update([
                 'status' => $e->reason === 'unauthorized' ? 'needs_auth' : 'error', 'last_error' => $e->getMessage(), 'last_sync_at' => now(), 'updated_at' => now(),
-            ]);
+            ] + (empty($job->params['dry_run']) ? ['next_sync_at' => now()->addHour()] : []));
             throw new ApiError('integration_'.$e->reason, $e->getMessage(), 502);
         }
     }

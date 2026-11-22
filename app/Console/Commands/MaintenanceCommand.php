@@ -41,8 +41,8 @@ class MaintenanceCommand extends Command
     {
         $queued = 0;
         $skipped = 0;
-        $due = DB::table('source_connections')->where('mode', 'mcp')->where('status', 'active')->whereNotNull('approved_at')->whereNotNull('credential_encrypted')
-            ->whereNull('archived_at')->get()->filter(fn ($c) => ! $c->last_sync_at || strtotime($c->last_sync_at) <= time() - 3600 * max(1, (int) $c->sync_interval_hours));
+        $due = DB::table('source_connections')->whereIn('mode', ['mcp', 'api'])->whereIn('status', ['active', 'error'])->whereNotNull('approved_at')->whereNotNull('credential_encrypted')
+            ->whereNull('archived_at')->where(fn ($q) => $q->whereNull('next_sync_at')->orWhere('next_sync_at', '<=', now()))->get();
         foreach ($due as $c) {
             $m = Membership::where('workspace_id', $c->workspace_id)->find($c->owner_membership_id);
             $u = $m ? User::find($m->user_id) : null;
@@ -60,7 +60,7 @@ class MaintenanceCommand extends Command
             } finally {
                 app()->forgetInstance(AccessContext::class);
             }
-            DB::table('source_connections')->where('id', $c->id)->update(['last_sync_at' => now()]);
+            DB::table('source_connections')->where('id', $c->id)->update(['next_sync_at' => now()->addHours(max(1, (int) $c->sync_interval_hours))]);
             $queued++;
         }
 

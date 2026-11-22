@@ -299,6 +299,8 @@ final class IntegrationService
         }
         if (isset($data['sync_interval_hours'])) {
             $set['sync_interval_hours'] = max(1, min(720, (int) $data['sync_interval_hours']));
+            $from = $c->last_success_at ? strtotime((string) $c->last_success_at) : time();
+            $set['next_sync_at'] = now()->setTimestamp(max(time(), $from + 3600 * $set['sync_interval_hours']));
         }
         if (isset($data['label']) && trim((string) $data['label']) !== '') {
             $set['label'] = mb_substr(trim((string) $data['label']), 0, 120);
@@ -342,6 +344,7 @@ final class IntegrationService
             }
             $this->update($c, ['approved_at' => now(), 'approved_by' => $this->ctx->user->id, 'status' => 'active', 'owner_membership_id' => $this->ctx->membership->id]);
             Audit::log('integration.approved', 'source_connection', $c->id, ['provider' => $c->provider], scopeId: $c->scope_id);
+            $this->startFirstSync($c->id);
 
             return $this->connection($c->id);
         }
@@ -353,8 +356,20 @@ final class IntegrationService
         }
         $this->update($c, ['approved_at' => now(), 'approved_by' => $this->ctx->user->id, 'status' => 'active', 'owner_membership_id' => $this->ctx->membership->id]);
         Audit::log('integration.approved', 'source_connection', $c->id, ['tool_map' => $preview['tool_map']], scopeId: $c->scope_id);
+        $this->startFirstSync($c->id);
 
         return $this->connection($c->id);
+    }
+
+    /** Approval starts syncing right away; if the queue is full the scheduler picks it up on its next tick. */
+    private function startFirstSync(string $id): void
+    {
+        DB::table('source_connections')->where('id', $id)->update(['next_sync_at' => now()]);
+        try {
+            $this->enqueue($id, false);
+            DB::table('source_connections')->where('id', $id)->update(['next_sync_at' => now()->addHours(max(1, (int) $this->connection($id)->sync_interval_hours))]);
+        } catch (ApiError) {
+        }
     }
 
     public function enqueue(string $id, bool $dryRun): array

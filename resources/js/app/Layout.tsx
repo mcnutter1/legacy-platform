@@ -13,7 +13,7 @@ const NAV: { group: string; items: { to: string; label: string; icon: string }[]
   { group: 'Wealth', items: [
     { to: 'net-worth', label: 'Net worth', icon: '◇' }, { to: 'accounts', label: 'Accounts', icon: '▤' }, { to: 'portfolio', label: 'Investments', icon: '◔' },
     { to: 'real-estate', label: 'Real estate', icon: '⌂' }, { to: 'assets', label: 'Assets', icon: '◆' }, { to: 'debts', label: 'Debts', icon: '⊖' },
-    { to: 'imports', label: 'Imports', icon: '⇪' }, { to: 'integrations', label: 'Integrations', icon: '⇄' }, { to: 'year-close', label: 'Year close', icon: '▦' },
+    { to: 'imports', label: 'Imports', icon: '⇪' }, { to: 'integrations', label: 'Integrations', icon: '⇄' }, { to: 'schedules', label: 'Schedules', icon: '◷' }, { to: 'year-close', label: 'Year close', icon: '▦' },
   ] },
   { group: 'Earnings & tax', items: [{ to: 'payroll', label: 'Payroll', icon: '¤' }, { to: 'business-income', label: 'Businesses & rentals', icon: '▤' }, { to: 'equity', label: 'Equity', icon: '◈' }, { to: 'tax', label: 'Tax', icon: '§' }] },
   { group: 'Planning', items: [{ to: 'planning', label: 'Retirement & goals', icon: '↗' }, { to: 'estate', label: 'Estate', icon: '⚖' }, { to: 'insurance', label: 'Insurance', icon: '☂' }] },

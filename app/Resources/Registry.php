@@ -233,7 +233,7 @@ final class Registry
                     'mode' => 'e:file|api|mcp', 'status' => '~s', 'config' => 'j', 'freshness_hours' => 'i',
                     'last_sync_at' => '~dt', 'last_success_at' => '~dt', 'last_error' => '~t',
                     'auth_kind' => '~s', 'server_url' => '~s', 'credential_hint' => '~s', 'credential_set_at' => '~dt', 'token_expires_at' => '~dt',
-                    'tool_map' => '~j', 'last_sync_stats' => '~j', 'approved_at' => '~dt', 'sync_interval_hours' => 'i', 'last_job_id' => '~s',
+                    'tool_map' => '~j', 'last_sync_stats' => '~j', 'approved_at' => '~dt', 'sync_interval_hours' => 'i', 'last_job_id' => '~s', 'next_sync_at' => '~dt',
                 ],
                 'heavy' => ['tool_catalog', 'last_preview'],
                 'list' => ['label', 'provider', 'mode', 'status', 'last_success_at'],

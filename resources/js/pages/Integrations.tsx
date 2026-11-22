@@ -225,7 +225,8 @@ function ConnectionBody({ c, provider }: { c: Connection; provider?: ProviderInf
       {c.approved_at && (
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">4 · Sync</h3>
-          <p className="text-sm">Approved {date(c.approved_at)} · runs every {c.sync_interval_hours} h{c.last_success_at ? ` · last success ${relative(c.last_success_at)}` : ''}.</p>
+          <p className="text-sm">Approved {date(c.approved_at)} · runs every {c.sync_interval_hours} h{c.last_success_at ? ` · last success ${relative(c.last_success_at)}` : ' · first sync queued'}.{' '}
+            <Link className="link" to={path('schedules')}>Schedules &amp; run history</Link></p>
           <div className="flex flex-wrap gap-2">
             <button className="btn-primary btn-sm" disabled={busy !== null} onClick={() => startJob('sync', 'Sync')}>Sync now</button>
             {rest && <Link className="btn-secondary btn-sm" to={path('business-income')}>Open Businesses &amp; rentals</Link>}

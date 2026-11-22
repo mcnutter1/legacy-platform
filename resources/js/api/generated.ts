@@ -440,6 +440,7 @@ export interface SourceConnections {
   approved_at?: string | null;
   sync_interval_hours?: number | null;
   last_job_id?: string | null;
+  next_sync_at?: string | null;
 }
 
 export interface BusinessLedgerLines {

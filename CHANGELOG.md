@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — schedules
+
+### Fixed
+- Approved connections never synced on their own: a preview reset the scheduler clock, REST connections were excluded
+  and connections in `error` were never retried. Scheduling now uses `next_sync_at`; approval queues the first sync;
+  failures retry after an hour. The scheduler checks every 15 minutes (was hourly).
+
+### Implemented
+- Admin › Schedules: every data-source sync (interval, next run, last success, Run now), on-demand county-record pulls,
+  system cron tasks with heartbeats, and run history with full output (parameters, timing, attempts, result, error,
+  metrics). Runs are visible to members who can read the connection or property.
+
 ## Unreleased — side-business and rental ingest
 
 ### Implemented

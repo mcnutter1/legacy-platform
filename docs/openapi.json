@@ -3549,6 +3549,66 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/schedules": {
+            "get": {
+                "operationId": "get_workspaces_workspace_schedules",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/schedules/runs/{job}": {
+            "get": {
+                "operationId": "get_workspaces_workspace_schedules_runs_job",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "job",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/search": {
             "get": {
                 "operationId": "get_workspaces_workspace_search",
@@ -6159,6 +6219,11 @@
                     },
                     "last_job_id": {
                         "type": "string",
+                        "readOnly": true
+                    },
+                    "next_sync_at": {
+                        "type": "string",
+                        "format": "date-time",
                         "readOnly": true
                     }
                 },
@@ -13593,6 +13658,16 @@
                 {
                     "name": "last_job_id",
                     "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "next_sync_at",
+                    "type": "dt",
                     "required": false,
                     "readonly": true,
                     "values": null,

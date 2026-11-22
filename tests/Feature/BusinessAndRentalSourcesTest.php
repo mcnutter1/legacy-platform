@@ -184,6 +184,38 @@ class BusinessAndRentalSourcesTest extends TestCase
         $this->assertSame(['1850.00', 1, 7, 7], [$view['rents'], $view['undetermined'], $view['days']['rental'], $view['days']['personal']]);
     }
 
+    public function test_approval_starts_syncing_scheduler_reschedules_and_schedules_page_shows_full_run_output(): void
+    {
+        $u = $this->makeUser('owner');
+        [$ws, , $joint] = $this->makeWorkspace($u);
+        $prop = $this->signIn($u)->send('POST', $this->wsUrl($ws, 'r/properties'), ['scope_id' => $joint->id, 'name' => 'Beach house', 'kind' => 'rental_str'])->json('data.id');
+        $id = $this->connect($ws, $u, ['provider' => 'property_manager', 'scope_id' => $joint->id, 'property_id' => $prop], 'fo_example_key_123');
+        $syncs = fn () => DB::table('compute_jobs')->where('type', 'integration.sync')->where('subject_id', $id)->get()->filter(fn ($j) => empty(json_decode($j->params, true)['dry_run']));
+        $this->assertCount(2, $syncs(), 'approval queues the first sync itself');
+        $this->assertGreaterThan(now()->addHours(23), now()->parse(DB::table('source_connections')->where('id', $id)->value('next_sync_at')));
+
+        $this->artisan('legacy:tick integrations')->assertSuccessful();
+        $this->assertCount(2, $syncs(), 'not due yet');
+        DB::table('source_connections')->where('id', $id)->update(['next_sync_at' => now()->subMinute()]);
+        $this->artisan('legacy:tick integrations')->assertSuccessful();
+        $this->artisan('legacy:tick integrations')->assertSuccessful();
+        $this->assertCount(3, $syncs(), 'due REST connection queued once');
+        $this->work();
+
+        $d = $this->signIn($u)->getJson($this->wsUrl($ws, 'schedules'))->assertOk()->json('data');
+        $src = $d['sources'][0];
+        $this->assertSame([$id, true, 'scheduled', 'succeeded'], [$src['id'], $src['scheduled'], $src['runs'][0]['trigger'], $src['runs'][0]['status']]);
+        $this->assertCount(count(\App\Support\Heartbeat::TASKS), $d['system']);
+        $run = $this->signIn($u)->getJson($this->wsUrl($ws, 'schedules/runs/'.$src['runs'][0]['id']))->assertOk()->json('data');
+        $this->assertArrayHasKey('stays_updated', $run['result']);
+        $this->assertSame(['connection_id' => $id, 'dry_run' => false, 'scheduled' => true], $run['params']);
+
+        $other = $this->makeUser('member-without-grants');
+        $this->addMember($ws, $other);
+        $this->signIn($other)->getJson($this->wsUrl($ws, 'schedules/runs/'.$src['runs'][0]['id']))->assertNotFound();
+        $this->assertSame([], $this->signIn($other)->getJson($this->wsUrl($ws, 'schedules'))->assertOk()->json('data.sources'));
+    }
+
     public function test_finance_books_become_schedule_c_with_account_mapping_and_no_double_count(): void
     {
         $u = $this->makeUser('owner');

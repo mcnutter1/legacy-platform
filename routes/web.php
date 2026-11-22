@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccessController;
 use App\Http\Controllers\Api\IntegrationController;
+use App\Http\Controllers\Api\ScheduleController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\PlanningController;
 use App\Http\Controllers\Api\PropertyController;
@@ -210,6 +211,8 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::get('/jobs/{job}', [WorkflowController::class, 'job']);
         Route::post('/jobs/{job}/cancel', [WorkflowController::class, 'cancelJob']);
         Route::post('/jobs/{job}/retry', [WorkflowController::class, 'retryJob']);
+        Route::get('/schedules', [ScheduleController::class, 'index']);
+        Route::get('/schedules/runs/{job}', [ScheduleController::class, 'job'])->where('job', $ulid);
         Route::get('/notifications', [WorkflowController::class, 'notifications']);
         Route::post('/notifications/{notification}', [WorkflowController::class, 'markNotification']);
         Route::get('/notification-preferences', [WorkflowController::class, 'preferences']);

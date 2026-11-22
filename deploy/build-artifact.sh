@@ -75,7 +75,7 @@ echo "$RELEASE" > "$STAGE/app/RELEASE"
 (cd "$STAGE/app" && find . -type f ! -name SHA256SUMS -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS)
 
 TARBALL="$OUT/mcnutt-legacy-${RELEASE}.tar.gz"
-tar -C "$STAGE/app" -czf "$TARBALL" .
+COPYFILE_DISABLE=1 tar --no-xattrs -C "$STAGE/app" -czf "$TARBALL" .
 (cd "$OUT" && shasum -a 256 "$(basename "$TARBALL")" > "$(basename "$TARBALL").sha256")
 log "Artifact: $TARBALL ($(du -h "$TARBALL" | cut -f1))"
 echo "$TARBALL"

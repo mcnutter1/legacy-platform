@@ -143,7 +143,7 @@ build_runner_env() {
   find "$venv" -type d -exec chmod 755 {} +
 }
 
-artisan() { (cd "$NEW_RELEASE" && as_app "$PHP" artisan "$@"); }
+artisan() { (cd "$NEW_RELEASE" && as_app env RUNNER_PYTHON="$NEW_RELEASE/runners/.venv/bin/python" "$PHP" artisan "$@"); }
 
 migrate_and_cache() {
   artisan config:clear >/dev/null

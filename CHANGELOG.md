@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — property value estimates
+
+### Implemented
+- "Estimate from nearby sales": deterministic comparable-sales indication from the NJ tax list (usable sales within 1.6 km
+  in 3 years, median sale ÷ current assessment × subject assessment, quartile range), saved as a proposed valuation.
+- "Record an estimate": enter a Zillow/Redfin/Realtor.com/appraisal/broker/own figure with range, date and link; accept
+  immediately or keep as a proposal.
+
+### Not implemented (by design)
+- Scraping Zillow/Redfin/Realtor.com: their terms prohibit automated collection and they block it. Licensed feeds
+  (RentCast key, Zillow via Bridge) remain supported.
+
 ## Unreleased — property tax records, recorded documents, joint title
 
 ### Implemented

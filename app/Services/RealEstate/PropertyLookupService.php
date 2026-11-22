@@ -28,7 +28,7 @@ final class PropertyLookupService
     ];
 
     private const PARCEL_FIELDS = 'PAMS_PIN,PCL_MUN,PCLBLOCK,PCLLOT,PCLQCODE,PROP_CLASS,COUNTY,MUN_NAME,PROP_LOC,OWNER_NAME,LAND_VAL,IMPRVT_VAL,'
-        .'NET_VALUE,LAST_YR_TX,BLDG_DESC,LAND_DESC,CALC_ACRE,DEED_BOOK,DEED_PAGE,DEED_DATE,YR_CONSTR,SALE_PRICE,ZIP5,PCLLASTUPD';
+        .'NET_VALUE,LAST_YR_TX,BLDG_DESC,LAND_DESC,CALC_ACRE,DEED_BOOK,DEED_PAGE,DEED_DATE,YR_CONSTR,SALE_PRICE,SALES_CODE,ZIP5,PCLLASTUPD';
 
     private const ABBREV = [
         'STREET' => 'ST', 'AVENUE' => 'AVE', 'ROAD' => 'RD', 'DRIVE' => 'DR', 'LANE' => 'LN', 'COURT' => 'CT', 'PLACE' => 'PL', 'BOULEVARD' => 'BLVD',
@@ -323,6 +323,7 @@ final class PropertyLookupService
                 'deed_page' => $this->clean($a['DEED_PAGE'] ?? null, 16),
                 'deed_date' => $this->deedDate($a['DEED_DATE'] ?? null),
                 'sale_price' => (int) ($a['SALE_PRICE'] ?? 0) > 100 ? $this->money($a['SALE_PRICE']) : null,
+                'sales_code' => $this->clean($a['SALES_CODE'] ?? null, 8),
                 'year_built' => (int) ($a['YR_CONSTR'] ?? 0) >= 1700 ? (int) $a['YR_CONSTR'] : null,
                 'zip' => $this->clean($a['ZIP5'] ?? null, 10),
                 'records_as_of' => isset($a['PCLLASTUPD']) && is_numeric($a['PCLLASTUPD']) ? date('Y-m-d', (int) ($a['PCLLASTUPD'] / 1000)) : null,
@@ -400,6 +401,60 @@ final class PropertyLookupService
 
         return ['source' => 'Zillow Zestimate (Bridge)', 'value' => $this->money($v), 'low' => $this->money($low), 'high' => $this->money($high),
             'as_of' => isset($z['timestamp']) ? substr((string) $z['timestamp'], 0, 10) : now()->toDateString(), 'url' => $url, 'details' => []];
+    }
+
+    /**
+     * Comparable-sales indication from the public tax list: recent usable sales of nearby same-class parcels,
+     * expressed as sale price ÷ current assessment and applied to the subject's assessment. Deterministic, sourced, and
+     * only as fresh as the MOD-IV sales feed (which can lag closings by a year or more).
+     */
+    public function comps(Record $p): array
+    {
+        if (! $this->ctx->can('real_estate', 'read', $p->scope_id)) {
+            throw ApiError::notFound();
+        }
+        if (! $p->mun_code || ! $p->latitude || ! $p->longitude || ! $p->assessed_total) {
+            throw ApiError::unsupported('Look up public records for this property first (needs the parcel location and assessment).');
+        }
+        $years = 3;
+        $cutoff = now()->subYears($years)->toDateString();
+        $class = $p->property_class ?: '2';
+        $key = 'property-comps:'.hash('sha256', implode('|', [$p->mun_code, $class, $p->latitude, $p->longitude]));
+        $sources = [];
+        $rows = Cache::remember($key, now()->addHours((int) config('legacy.property_lookup.cache_hours')), fn () => $this->parcelQuery([
+            'where' => "PCL_MUN='".preg_replace('/\D/', '', $p->mun_code)."' AND PROP_CLASS='".preg_replace('/[^0-9A-Z]/', '', strtoupper($class))."' AND SALE_PRICE>100000",
+            'geometry' => $p->longitude.','.$p->latitude, 'geometryType' => 'esriGeometryPoint', 'inSR' => 4326, 'spatialRel' => 'esriSpatialRelIntersects',
+            'distance' => 1600, 'units' => 'esriSRUnit_Meter',
+        ], $sources));
+        $subjectAssessed = Dec::norm($p->assessed_total);
+        $comps = [];
+        foreach ($rows as $r) {
+            if ($r['pin'] === $p->parcel_pin || ! $r['sale_price'] || ! $r['assessed_total'] || ! $r['deed_date'] || $r['deed_date'] < $cutoff || ! empty($r['sales_code'])) {
+                continue;
+            }
+            $ratio = (float) $r['sale_price'] / max(1.0, (float) $r['assessed_total']);
+            // Outside 0.5–2.0 is almost always a non-arm's-length transfer or a since-improved lot.
+            if ($ratio < 0.5 || $ratio > 2.0) {
+                continue;
+            }
+            $comps[] = ['location' => $r['location'], 'block' => $r['block'], 'lot' => $r['lot'], 'sale_date' => $r['deed_date'], 'sale_price' => $r['sale_price'],
+                'assessed_total' => $r['assessed_total'], 'ratio' => round($ratio, 4), 'year_built' => $r['year_built'],
+                'distance_m' => isset($r['_lat']) ? (int) round($this->meters((float) $p->latitude, (float) $p->longitude, $r['_lat'], $r['_lon'])) : null];
+        }
+        usort($comps, fn ($a, $b) => [$b['sale_date'], $a['distance_m']] <=> [$a['sale_date'], $b['distance_m']]);
+        $comps = array_slice($comps, 0, 15);
+        $out = ['subject' => ['assessed_total' => $subjectAssessed, 'property_class' => $class], 'window_years' => $years, 'comps' => $comps, 'sources' => $sources,
+            'method' => 'Median of (sale price ÷ current assessment) for usable sales within 1.6 km in the last '.$years.' years, times this property’s assessment.'];
+        if (count($comps) < 3) {
+            return $out + ['status' => 'insufficient', 'message' => 'Fewer than three recent usable sales nearby in the public tax list.'];
+        }
+        $ratios = array_column($comps, 'ratio');
+        sort($ratios);
+        $q = fn (float $f, bool $up = false) => $ratios[(int) ($up ? ceil($f * (count($ratios) - 1)) : floor($f * (count($ratios) - 1)))];
+        $value = fn (float $r) => Dec::norm(Dec::round(Dec::mul(Dec::div($subjectAssessed, '1000', 8), (string) $r, 8), 0).'000');
+
+        return $out + ['status' => 'ok', 'median_ratio' => $q(0.5), 'value' => $value($q(0.5)), 'low' => $value($q(0.25)), 'high' => $value($q(0.75, true)),
+            'newest_sale' => $comps[0]['sale_date']];
     }
 
     /** Listing sites and county clerks have no public API (and block automated access), so the app links out. */

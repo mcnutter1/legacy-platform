@@ -174,6 +174,37 @@ class PropertyRecordsTest extends TestCase
         $this->assertNull(PropertyLookupService::monmouthCardKey('1316', "40' OR 1", '1', null));
     }
 
+    public function test_public_record_comps_and_recorded_estimates(): void
+    {
+        $recent = fn (int $months) => now()->subMonths($months)->format('ymd');
+        $sale = fn (string $pin, int $price, int $assessed, string $date, string $code = '') => ['attributes' => ['PAMS_PIN' => $pin, 'PCL_MUN' => '1351', 'PCLBLOCK' => '1',
+            'PCLLOT' => substr($pin, -1), 'PROP_CLASS' => '2', 'COUNTY' => 'MONMOUTH', 'PROP_LOC' => "{$pin} EXAMPLE CIRCLE", 'NET_VALUE' => $assessed, 'SALE_PRICE' => $price,
+            'DEED_DATE' => $date, 'SALES_CODE' => $code], 'centroid' => ['x' => -74.5, 'y' => 40.1]];
+        Http::fake(['services2.arcgis.com/*' => Http::response(['features' => [
+            $sale('1351_1_1', 1100000, 1000000, $recent(4)), $sale('1351_1_2', 1200000, 1000000, $recent(10)), $sale('1351_1_3', 1300000, 1000000, $recent(20)),
+            $sale('1351_1_4', 900000, 1000000, $recent(80)), $sale('1351_1_5', 10, 1000000, $recent(2)), $sale('1351_1_6', 2500000, 1000000, $recent(3), '26'),
+            $sale('1351_1_9', 1500000, 1500000, $recent(1)),
+        ]])]);
+        $u = $this->makeUser('owner');
+        [$ws, , $joint] = $this->makeWorkspace($u);
+        $id = $this->signIn($u)->send('POST', $this->wsUrl($ws, 'r/properties'), ['scope_id' => $joint->id, 'name' => 'Home', 'kind' => 'primary'])->json('data.id');
+        $this->getJson($this->wsUrl($ws, "properties/{$id}/comps"))->assertStatus(422);
+        DB::table('properties')->where('id', $id)->update(['mun_code' => '1351', 'latitude' => '40.1', 'longitude' => '-74.5', 'assessed_total' => '1700000', 'parcel_pin' => '1351_1_9', 'property_class' => '2']);
+
+        $c = $this->getJson($this->wsUrl($ws, "properties/{$id}/comps"))->assertOk()->json('data');
+        // Old (80 months), nominal ($10), NU-coded and the subject itself are excluded; ratios 1.1, 1.2, 1.3.
+        $this->assertSame(['ok', 3, 1.2], [$c['status'], count($c['comps']), $c['median_ratio']]);
+        $this->assertSame(['2040000.0000', '1870000.0000', '2210000.0000'], [$c['value'], $c['low'], $c['high']]);
+
+        $this->send('POST', $this->wsUrl($ws, "estimates/property/{$id}"), ['source' => 'zillow', 'value' => '2,200,000', 'url' => 'http://example.test/x'])->assertStatus(422);
+        $this->send('POST', $this->wsUrl($ws, "estimates/property/{$id}"), ['source' => 'zillow', 'value' => '$2,200,000', 'url' => 'https://www.zillow.com/homedetails/example'])
+            ->assertCreated()->assertJsonPath('data.status', 'proposed');
+        $this->send('POST', $this->wsUrl($ws, "estimates/property/{$id}"), ['source' => 'own', 'value' => '1950000', 'low' => '1800000', 'high' => '2100000', 'accept' => true])
+            ->assertCreated()->assertJsonPath('data.status', 'accepted');
+        $f = $this->getJson($this->wsUrl($ws, "collateral/property/{$id}"))->json('data');
+        $this->assertEquals([1950000, 1], [(float) $f['value'], $f['proposed_valuations']]);
+    }
+
     public function test_financing_hides_loans_without_debt_access(): void
     {
         $owner = $this->makeUser('owner');

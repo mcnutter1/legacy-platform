@@ -194,6 +194,97 @@ interface Financing {
 }
 
 /** Loans secured by a home, car, boat or other titled asset, with equity and valuation review. */
+interface Comps {
+  status: 'ok' | 'insufficient'; message?: string; method: string; window_years: number; median_ratio?: number; value?: string; low?: string; high?: string; newest_sale?: string;
+  subject: { assessed_total: string }; comps: { location: string; block: string; lot: string; sale_date: string; sale_price: string; assessed_total: string; ratio: number; distance_m: number | null }[];
+}
+
+const ESTIMATE_SOURCES: [string, string][] = [['zillow', 'Zillow Zestimate'], ['redfin', 'Redfin Estimate'], ['realtor', 'Realtor.com'], ['appraisal', 'Appraisal'],
+  ['broker', 'Broker price opinion'], ['own', 'Our own estimate'], ['other', 'Other source']];
+
+/** Get a current value: public-record comparable sales, or record a figure seen on Zillow/Redfin/an appraisal. */
+function EstimatesPanel({ type, id, hasValue }: { type: 'property' | 'asset'; id: string; hasValue: boolean }) {
+  const { id: wsId } = useWorkspace();
+  const qc = useQueryClient();
+  const [showComps, setShowComps] = useState(false);
+  const [entry, setEntry] = useState<Record<string, string> | null>(null);
+  const comps = useWsQuery<Comps>(['comps', id], `properties/${id}/comps`, { enabled: showComps && type === 'property', retry: false });
+  const subject = useWsQuery<AnyRecord>(['estimate-subject', type, id], `r/${type === 'property' ? 'properties' : 'assets'}/${id}`);
+  const addr = (subject.data?.normalized_address as string | undefined) ?? [subject.data?.address_line, subject.data?.city, subject.data?.state, subject.data?.postal_code].filter(Boolean).join(', ');
+  const slug = addr ? addr.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
+  const [err, setErr] = useState<unknown>(null);
+  const [saving, setSaving] = useState(false);
+  const save = async (body: Record<string, unknown>) => {
+    setSaving(true); setErr(null);
+    try { await api(ws(wsId, `estimates/${type}/${id}`), { body }); await qc.invalidateQueries({ queryKey: [wsId] }); setEntry(null); } catch (x) { setErr(x); } finally { setSaving(false); }
+  };
+  return (
+    <Card title="Current value" subtitle={hasValue ? 'Add newer estimates as they come in; accept one to update net worth.' : 'No current market value yet — net worth flags this item until one is accepted.'}
+      actions={<div className="flex flex-wrap gap-2">
+        {type === 'property' && <button className="btn-secondary btn-sm" onClick={() => setShowComps(true)}>Estimate from nearby sales</button>}
+        <button className="btn-primary btn-sm" onClick={() => setEntry({ source: 'zillow', value: '', low: '', high: '', url: '', note: '', as_of: new Date().toISOString().slice(0, 10), accept: '1' })}>Record an estimate</button>
+      </div>}>
+      {type === 'property' && slug && (
+        <p className="text-sm">Look it up: <a className="link" href={`https://www.zillow.com/homes/${slug}_rb/`} target="_blank" rel="noreferrer noopener">Zillow ↗</a>{' · '}
+          <a className="link" href={`https://www.redfin.com/search?q=${encodeURIComponent(addr)}`} target="_blank" rel="noreferrer noopener">Redfin ↗</a>{' '}
+          <span className="text-xs text-muted">then record the figure here with its link.</span></p>
+      )}
+      {showComps && type === 'property' && (
+        <div className="mt-4">
+          <Query q={comps}>
+            {(c) => (
+              <div className="space-y-3">
+                {c.status === 'ok' ? (
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div><p className="text-xs text-muted">Indicated value (public tax list)</p><p className="text-2xl"><Money value={c.value} /></p>
+                      <p className="text-xs text-muted">Range <Money value={c.low} /> – <Money value={c.high} /> · median {c.median_ratio?.toFixed(2)}× assessment</p></div>
+                    <button className="btn-secondary btn-sm" disabled={saving} onClick={() => void save({ source: 'public_records_comps', value: c.value, low: c.low, high: c.high, accept: false,
+                      note: `${c.comps.length} sales, newest ${c.newest_sale}. ${c.method}` })}>Save as proposed valuation</button>
+                  </div>
+                ) : <Notice tone="warning">{c.message}</Notice>}
+                <p className="text-xs text-muted">{c.method} The state sales feed can lag closings by a year or more, so recent sales and newer listing-site estimates may be higher.</p>
+                {c.comps.length > 0 && (
+                  <div className="table-wrap"><table className="data-table">
+                    <thead><tr><th>Address</th><th>Block/lot</th><th>Sold</th><th className="text-right">Price</th><th className="text-right">Assessed</th><th className="text-right">Ratio</th><th className="text-right">Distance</th></tr></thead>
+                    <tbody>{c.comps.map((s) => (
+                      <tr key={s.block + s.lot}><td>{s.location}</td><td className="num">{s.block}/{s.lot}</td><td className="num">{date(s.sale_date)}</td>
+                        <td className="text-right"><Money value={s.sale_price} /></td><td className="text-right"><Money value={s.assessed_total} /></td>
+                        <td className="num text-right">{s.ratio.toFixed(2)}</td><td className="num text-right">{s.distance_m !== null ? `${s.distance_m} m` : '—'}</td></tr>
+                    ))}</tbody>
+                  </table></div>
+                )}
+              </div>
+            )}
+          </Query>
+        </div>
+      )}
+      <div className="mt-2"><FormError error={err} /></div>
+      <Dialog open={!!entry} onClose={() => setEntry(null)} title="Record an estimate">
+        {entry && (
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void save({ ...entry, accept: entry.accept === '1', url: entry.url || undefined, low: entry.low || undefined, high: entry.high || undefined }); }}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="field"><span>Source</span><select value={entry.source} onChange={(e) => setEntry({ ...entry, source: e.target.value })}>
+                {ESTIMATE_SOURCES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+              <label className="field"><span>As of</span><input type="date" value={entry.as_of} onChange={(e) => setEntry({ ...entry, as_of: e.target.value })} required /></label>
+              <label className="field"><span>Value</span><input inputMode="decimal" value={entry.value} onChange={(e) => setEntry({ ...entry, value: e.target.value })} placeholder="1,950,000" required /></label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="field"><span>Low</span><input inputMode="decimal" value={entry.low} onChange={(e) => setEntry({ ...entry, low: e.target.value })} /></label>
+                <label className="field"><span>High</span><input inputMode="decimal" value={entry.high} onChange={(e) => setEntry({ ...entry, high: e.target.value })} /></label>
+              </div>
+              <label className="field sm:col-span-2"><span>Link (optional)</span><input inputMode="url" value={entry.url} onChange={(e) => setEntry({ ...entry, url: e.target.value })} placeholder="https://www.zillow.com/homedetails/…" /></label>
+              <label className="field sm:col-span-2"><span>Note</span><textarea rows={2} value={entry.note} onChange={(e) => setEntry({ ...entry, note: e.target.value })} placeholder="e.g. Zillow lists 8,900 sq ft incl. lower level; Redfin 6,072" /></label>
+            </div>
+            <label className="flex items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 min-h-0" checked={entry.accept === '1'} onChange={(e) => setEntry({ ...entry, accept: e.target.checked ? '1' : '' })} />
+              Use as the current value (otherwise saved as a proposal to review)</label>
+            <FormError error={err} />
+            <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setEntry(null)}>Cancel</button><button className="btn-primary" disabled={saving}>Save</button></div>
+          </form>
+        )}
+      </Dialog>
+    </Card>
+  );
+}
+
 export function FinancingPanel({ type, id }: { type: 'property' | 'asset'; id: string }) {
   const q = useWsQuery<Financing>(['collateral', type, id], `collateral/${type}/${id}`);
   const liabilities = useResourceList('liabilities', { limit: 200 });
@@ -244,6 +335,7 @@ export function FinancingPanel({ type, id }: { type: 'property' | 'asset'; id: s
               </>
             )}
           </Card>
+          <EstimatesPanel type={type} id={id} hasValue={f.value_method !== 'purchase price' && f.value_method !== 'cost' && f.value !== null} />
           <Card title="Valuations" subtitle="Only accepted market valuations count toward net worth and equity." pad={false}>
             <Query q={vals}>
               {(p) => p.data.length === 0 ? <p className="p-5 text-sm text-muted">No valuations yet.</p> : (

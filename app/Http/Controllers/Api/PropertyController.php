@@ -112,6 +112,53 @@ class PropertyController extends ApiController
         return $this->ok((new TitleService($this->ctx()))->set($type, $id, $r->only(['title_form', 'effective_from', 'owners', 'evidence_document_id'])));
     }
 
+    public function comps(string $property): JsonResponse
+    {
+        $row = (new ResourceService($this->ctx()))->find('properties', $property);
+
+        return $this->ok((new PropertyLookupService($this->ctx()))->comps($row));
+    }
+
+    private const ESTIMATE_SOURCES = [
+        'zillow' => ['Zillow Zestimate', 'model'], 'redfin' => ['Redfin Estimate', 'model'], 'realtor' => ['Realtor.com estimate', 'model'],
+        'appraisal' => ['Appraisal', 'appraisal'], 'broker' => ['Broker price opinion', 'comps'], 'public_records_comps' => ['NJ tax-list comparable sales', 'comps'],
+        'own' => ['Owner estimate', 'owner_override'], 'other' => ['Other source', 'model'],
+    ];
+
+    /** Record a value seen elsewhere (Zillow, Redfin, an appraisal…) with its source; optionally use it as the current value. */
+    public function recordEstimate(Request $r, string $type, string $id): JsonResponse
+    {
+        $table = self::COLLATERAL[$type] ?? throw ApiError::notFound();
+        $ctx = $this->ctx();
+        $subject = (new ResourceService($ctx))->find($table, $id);
+        if (! $ctx->can('assets', 'write', $subject->scope_id)) {
+            throw ApiError::forbidden();
+        }
+        $d = $this->validated($r, ['source' => 'required|in:'.implode(',', array_keys(self::ESTIMATE_SOURCES)), 'value' => 'required|string|max:24', 'low' => 'nullable|string|max:24',
+            'high' => 'nullable|string|max:24', 'as_of' => 'nullable|date_format:Y-m-d|before_or_equal:today', 'url' => 'nullable|url:https|max:500', 'note' => 'nullable|string|max:1000',
+            'accept' => 'nullable|boolean', 'source_label' => 'nullable|string|max:80']);
+        $num = fn ($v) => $v === null || $v === '' ? null : Dec::tryNorm(str_replace([',', '$', ' '], '', (string) $v));
+        [$value, $low, $high] = [$num($d['value']), $num($d['low'] ?? null), $num($d['high'] ?? null)];
+        if ($value === null || Dec::cmp($value, '0') <= 0 || ($low && Dec::cmp($low, $value) > 0) || ($high && Dec::cmp($high, $value) < 0)) {
+            throw new ApiError('validation_failed', 'Enter a positive value (and a range that brackets it).', 422);
+        }
+        [$label, $method] = self::ESTIMATE_SOURCES[$d['source']];
+        $label = $d['source'] === 'other' && ! empty($d['source_label']) ? mb_substr($d['source_label'], 0, 80) : $label;
+        $accept = (bool) ($d['accept'] ?? false);
+        $vid = (string) \Illuminate\Support\Str::ulid();
+        DB::table('valuations')->insert([
+            'id' => $vid, 'workspace_id' => $ctx->workspace->id, 'scope_id' => $subject->scope_id, 'subject_type' => $type, 'subject_id' => $subject->id,
+            'purpose' => 'market', 'value' => $value, 'low' => $low, 'high' => $high, 'currency' => 'USD', 'as_of' => $d['as_of'] ?? now()->toDateString(),
+            'method' => $method, 'source' => $label.' (entered by '.$ctx->user->name.')', 'status' => $accept ? 'accepted' : 'proposed',
+            'accepted_by' => $accept ? $ctx->user->id : null, 'accepted_at' => $accept ? now() : null,
+            'rationale' => trim(($d['note'] ?? '').(! empty($d['url']) ? "\nSource: ".$d['url'] : '')) ?: null,
+            'created_by' => $ctx->user->id, 'updated_by' => $ctx->user->id, 'created_at' => now(), 'updated_at' => now(), 'edit_version' => 1,
+        ]);
+        Audit::log('valuation.recorded', 'valuation', $vid, ['source' => $d['source'], 'accepted' => $accept], scopeId: $subject->scope_id);
+
+        return $this->ok(['valuation_id' => $vid, 'status' => $accept ? 'accepted' : 'proposed'], 201);
+    }
+
     public function decideValuation(Request $r, string $valuation): JsonResponse
     {
         $row = (new ResourceService($this->ctx()))->find('valuations', $valuation, 'write');

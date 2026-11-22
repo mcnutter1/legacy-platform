@@ -1,0 +1,41 @@
+{
+  "jurisdiction": "US",
+  "tax_year": 2025,
+  "version": "2025.1",
+  "legislation_status": "enacted",
+  "release_note": "Rev. Proc. 2024-40 amounts as amended by Pub. L. 119-21 (OBBBA). Draft until a named reviewer approves the release in Tax > Rule packs.",
+  "rules": {
+    "std_deduction": {"value": {"single": "15750", "mfj": "31500", "mfs": "15750", "hoh": "23625", "qss": "31500"}, "authority": "https://www.irs.gov/instructions/i1040gi", "locator": "IRC 63(c)(2) as amended by P.L. 119-21 sec. 70102; Form 1040 line 12"},
+    "additional_std": {"value": {"married": "1600", "unmarried": "2000"}, "authority": "https://www.irs.gov/pub/irs-drop/rp-24-40.pdf", "locator": "Rev. Proc. 2024-40 sec. 3.15(3)"},
+    "brackets": {"value": {
+      "single": [["11925", "0.10"], ["48475", "0.12"], ["103350", "0.22"], ["197300", "0.24"], ["250525", "0.32"], ["626350", "0.35"], [null, "0.37"]],
+      "mfj": [["23850", "0.10"], ["96950", "0.12"], ["206700", "0.22"], ["394600", "0.24"], ["501050", "0.32"], ["751600", "0.35"], [null, "0.37"]],
+      "mfs": [["11925", "0.10"], ["48475", "0.12"], ["103350", "0.22"], ["197300", "0.24"], ["250525", "0.32"], ["375800", "0.35"], [null, "0.37"]],
+      "hoh": [["17000", "0.10"], ["64850", "0.12"], ["103350", "0.22"], ["197300", "0.24"], ["250500", "0.32"], ["626350", "0.35"], [null, "0.37"]]
+    }, "authority": "https://www.irs.gov/pub/irs-drop/rp-24-40.pdf", "locator": "Rev. Proc. 2024-40 sec. 3.01 Tables 1-4; IRC 1(j)"},
+    "cg_thresholds": {"value": {
+      "single": ["48350", "533400"], "mfj": ["96700", "600050"], "mfs": ["48350", "300000"], "hoh": ["64750", "566700"]
+    }, "authority": "https://www.irs.gov/pub/irs-drop/rp-24-40.pdf", "locator": "Rev. Proc. 2024-40 sec. 3.03; Qualified Dividends and Capital Gain Tax Worksheet"},
+    "unrecaptured_1250_rate": {"value": "0.25", "authority": "https://www.law.cornell.edu/uscode/text/26/1", "locator": "IRC 1(h)(1)(E)"},
+    "collectibles_rate": {"value": "0.28", "authority": "https://www.law.cornell.edu/uscode/text/26/1", "locator": "IRC 1(h)(4)"},
+    "niit": {"value": {"rate": "0.038", "threshold": {"single": "200000", "hoh": "200000", "mfj": "250000", "qss": "250000", "mfs": "125000"}}, "authority": "https://www.irs.gov/forms-pubs/about-form-8960", "locator": "IRC 1411; Form 8960 line 14"},
+    "addl_medicare": {"value": {"rate": "0.009", "threshold": {"single": "200000", "hoh": "200000", "mfj": "250000", "qss": "250000", "mfs": "125000"}}, "authority": "https://www.irs.gov/forms-pubs/about-form-8959", "locator": "IRC 3101(b)(2); Form 8959"},
+    "payroll": {"value": {"ss_wage_base": "176100", "ss_rate": "0.062", "medicare_rate": "0.0145", "se_ss_rate": "0.124", "se_medicare_rate": "0.029", "se_factor": "0.9235", "se_min": "400"}, "authority": "https://www.ssa.gov/oact/cola/cbb.html", "locator": "SSA contribution and benefit base 2025; Schedule SE"},
+    "amt": {"value": {"exemption": {"single": "88100", "hoh": "88100", "mfj": "137000", "qss": "137000", "mfs": "68500"}, "phaseout_start": {"single": "626350", "hoh": "626350", "mfj": "1252700", "qss": "1252700", "mfs": "626350"}, "phaseout_rate": "0.25", "rate_break": {"default": "239100", "mfs": "119550"}}, "authority": "https://www.irs.gov/instructions/i6251", "locator": "Rev. Proc. 2024-40 sec. 3.11; Form 6251"},
+    "ctc": {"value": {"per_child": "2200", "odc": "500", "phaseout_start": {"mfj": "400000", "default": "200000"}, "phaseout_step": "1000", "phaseout_amount": "50", "refundable_max": "1700", "earned_floor": "2500", "earned_rate": "0.15"}, "authority": "https://www.irs.gov/instructions/i1040s8", "locator": "IRC 24 as amended by P.L. 119-21 sec. 70104; Schedule 8812"},
+    "salt": {"value": {"cap": {"default": "40000", "mfs": "20000"}, "phaseout_start": {"default": "500000", "mfs": "250000"}, "phaseout_rate": "0.30", "floor": {"default": "10000", "mfs": "5000"}}, "authority": "https://www.irs.gov/instructions/i1040sca", "locator": "IRC 164(b)(6) as amended by P.L. 119-21 sec. 70120; Schedule A line 5e"},
+    "senior_deduction": {"value": {"amount": "6000", "age": 65, "phaseout_start": {"default": "75000", "mfj": "150000"}, "phaseout_rate": "0.06"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 151(d)(5)(C) per P.L. 119-21 sec. 70103; Schedule 1-A Part V"},
+    "tips_deduction": {"value": {"max": "25000", "phaseout_start": {"default": "150000", "mfj": "300000"}, "per_1000": "100"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 224 per P.L. 119-21 sec. 70201; Schedule 1-A Part II"},
+    "overtime_deduction": {"value": {"max": {"default": "12500", "mfj": "25000"}, "phaseout_start": {"default": "150000", "mfj": "300000"}, "per_1000": "100"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 225 per P.L. 119-21 sec. 70202; Schedule 1-A Part III"},
+    "car_loan_interest": {"value": {"max": "10000", "phaseout_start": {"default": "100000", "mfj": "200000"}, "per_1000": "200"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 163(h)(4) per P.L. 119-21 sec. 70203; Schedule 1-A Part IV"},
+    "qbi": {"value": {"rate": "0.20", "threshold": {"default": "197300", "mfj": "394600"}, "phase_in": {"default": "50000", "mfj": "100000"}}, "authority": "https://www.irs.gov/instructions/i8995", "locator": "IRC 199A; Rev. Proc. 2024-40 sec. 3.27; Form 8995/8995-A"},
+    "itemized": {"value": {"medical_floor": "0.075", "charity_cash_limit": "0.60", "charity_floor": "0", "mortgage_debt_limit": "750000", "nonitemizer_charity": "0", "limitation_rate": null}, "authority": "https://www.irs.gov/instructions/i1040sca", "locator": "Schedule A; IRC 170(b), 213(a), 163(h)(3)"},
+    "capital_loss_limit": {"value": {"default": "3000", "mfs": "1500"}, "authority": "https://www.law.cornell.edu/uscode/text/26/1211", "locator": "IRC 1211(b)"},
+    "passive_allowance": {"value": {"amount": "25000", "mfs_apart": "12500", "phaseout_start": "100000", "phaseout_end": "150000", "rate": "0.50"}, "authority": "https://www.irs.gov/publications/p925", "locator": "IRC 469(i); Pub. 925; Form 8582"},
+    "ss_taxability": {"value": {"base1": {"default": "25000", "mfj": "32000", "mfs": "0"}, "base2": {"default": "34000", "mfj": "44000", "mfs": "0"}}, "authority": "https://www.irs.gov/publications/p915", "locator": "IRC 86; Pub. 915 worksheet"},
+    "estimated_tax": {"value": {"current_year_pct": "0.90", "prior_year_pct": "1.00", "prior_year_high_pct": "1.10", "high_agi": {"default": "150000", "mfs": "75000"}, "underpayment_rate": "0.07", "min_balance": "1000", "due_dates": ["2025-04-15", "2025-06-16", "2025-09-15", "2026-01-15"]}, "authority": "https://www.irs.gov/forms-pubs/about-form-2210", "locator": "IRC 6654; Form 2210; Form 1040-ES"},
+    "contribution_limits": {"value": {"401k": "23500", "401k_catchup": "7500", "401k_catchup_60_63": "11250", "415c": "70000", "ira": "7000", "ira_catchup": "1000", "hsa_self": "4300", "hsa_family": "8550", "hsa_catchup": "1000", "sep_pct": "0.25", "comp_limit": "350000"}, "authority": "https://www.irs.gov/newsroom/401k-limit-increases-to-23500-for-2025-ira-limit-remains-7000", "locator": "IRS Notice 2024-80"},
+    "section_179": {"value": {"limit": "2500000", "phaseout": "4000000", "bonus_rate": "1.00"}, "authority": "https://www.irs.gov/instructions/i4562", "locator": "IRC 179(b) and 168(k) per P.L. 119-21 secs. 70301, 70306"},
+    "estate_gift": {"value": {"exemption": "13990000", "annual_exclusion": "19000", "top_rate": "0.40"}, "authority": "https://www.irs.gov/businesses/small-businesses-self-employed/whats-new-estate-and-gift-tax", "locator": "Rev. Proc. 2024-40 sec. 3.41, 3.43"}
+  }
+}

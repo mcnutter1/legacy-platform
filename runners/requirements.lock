@@ -1,0 +1,11 @@
+# Runtime dependencies for legacy_runners (CPython 3.12, linux x86_64 on the server).
+# Pinned exactly; deploy/build-artifact.sh downloads these as binary wheels into the release wheelhouse,
+# records their SHA-256 in SHA256SUMS, and the server installs offline with --no-index.
+# Update deliberately: bump here, run `pytest` in runners/, commit, redeploy.
+annotated-types==0.8.0
+numpy==2.5.5
+pydantic==2.14.4
+pydantic_core==2.50.5
+pypdf==6.21.4
+typing-inspection==0.4.5
+typing_extensions==4.16.0

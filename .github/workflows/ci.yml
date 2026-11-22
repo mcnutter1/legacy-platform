@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, intl, sodium, pdo_sqlite, zip, gd, mbstring
+          coverage: none
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Composer (locked)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Runner virtualenv (locked runtime deps)
+        run: |
+          python -m venv runners/.venv
+          runners/.venv/bin/pip install --quiet -r runners/requirements.lock
+          runners/.venv/bin/pip install --quiet --no-deps -e runners
+          runners/.venv/bin/pip install --quiet "pytest>=8"
+
+      - name: npm (locked)
+        run: npm ci
+
+      - name: Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Calculator tests (pytest)
+        working-directory: runners
+        run: .venv/bin/python -m pytest -q
+
+      - name: TypeScript strict typecheck
+        run: npm run typecheck
+
+      - name: Frontend tests (Vitest)
+        run: npm test
+
+      - name: Production asset build
+        run: npm run build
+
+      - name: PHP tests (feature + unit, incl. runner end-to-end)
+        run: php artisan test
+
+      - name: OpenAPI / TS contract is current
+        run: php artisan legacy:openapi --check
+
+      - name: Shell scripts
+        run: shellcheck -S warning -x -P deploy/server deploy.sh deploy/build-artifact.sh deploy/server/*.sh scripts/*.sh
+
+      - name: Migrations on MySQL 8 (fresh)
+        run: |
+          sudo systemctl start mysql
+          mysql -uroot -proot -e "CREATE DATABASE legacy_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+          DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_DATABASE=legacy_ci DB_USERNAME=root DB_PASSWORD=root php artisan migrate --force
+          DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_DATABASE=legacy_ci DB_USERNAME=root DB_PASSWORD=root php artisan legacy:packs-sync
+
+      - name: Secret scan (tracked files)
+        run: |
+          ! git grep -nE '(sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|OPENSSH|EC) PRIVATE KEY-----|ghp_[A-Za-z0-9]{36})' -- . ':!*.lock' ':!package-lock.json'
+
+      - name: Dependency audit
+        run: |
+          composer audit --no-interaction
+          npm audit --omit=dev --audit-level=high

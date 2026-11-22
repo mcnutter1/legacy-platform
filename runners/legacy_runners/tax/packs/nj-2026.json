@@ -1,0 +1,25 @@
+{
+  "jurisdiction": "NJ",
+  "tax_year": 2026,
+  "version": "2026.1",
+  "legislation_status": "provisional",
+  "release_note": "Carries forward 2025 NJ-1040 structure; NJ rate schedules are not indexed. Provisional until the 2026 NJ-1040 instructions are published and a reviewer approves.",
+  "rules": {
+    "brackets": {"value": {
+      "single": [["20000", "0.014"], ["35000", "0.0175"], ["40000", "0.035"], ["75000", "0.05525"], ["500000", "0.0637"], ["1000000", "0.0897"], [null, "0.1075"]],
+      "mfs": [["20000", "0.014"], ["35000", "0.0175"], ["40000", "0.035"], ["75000", "0.05525"], ["500000", "0.0637"], ["1000000", "0.0897"], [null, "0.1075"]],
+      "mfj": [["20000", "0.014"], ["50000", "0.0175"], ["70000", "0.0245"], ["80000", "0.035"], ["150000", "0.05525"], ["500000", "0.0637"], ["1000000", "0.0897"], [null, "0.1075"]],
+      "hoh": [["20000", "0.014"], ["50000", "0.0175"], ["70000", "0.0245"], ["80000", "0.035"], ["150000", "0.05525"], ["500000", "0.0637"], ["1000000", "0.0897"], [null, "0.1075"]],
+      "qss": [["20000", "0.014"], ["50000", "0.0175"], ["70000", "0.0245"], ["80000", "0.035"], ["150000", "0.05525"], ["500000", "0.0637"], ["1000000", "0.0897"], [null, "0.1075"]]
+    }, "authority": "https://www.nj.gov/treasury/taxation/njit1.shtml", "locator": "N.J.S.A. 54A:2-1"},
+    "filing_threshold": {"value": {"single": "10000", "mfs": "10000", "mfj": "20000", "hoh": "20000", "qss": "20000"}, "authority": "https://www.nj.gov/treasury/taxation/njit1.shtml", "locator": "N.J.S.A. 54A:2-4"},
+    "exemptions": {"value": {"taxpayer": "1000", "spouse": "1000", "age_65_or_blind": "1000", "dependent": "1500", "college_student": "1000", "veteran": "6000"}, "authority": "https://www.nj.gov/treasury/taxation/njit1.shtml", "locator": "N.J.S.A. 54A:3-1"},
+    "medical_floor": {"value": "0.02", "authority": "https://www.nj.gov/treasury/taxation/njit1.shtml", "locator": "N.J.S.A. 54A:3-3"},
+    "property_tax": {"value": {"deduction_max": "15000", "credit": "50", "renter_pct": "0.18"}, "authority": "https://www.nj.gov/treasury/taxation/njit1.shtml", "locator": "N.J.S.A. 54A:3A-17"},
+    "pension_exclusion": {"value": {"age": 62, "max": {"mfj": "100000", "single": "75000", "hoh": "75000", "qss": "75000", "mfs": "50000"}, "income_limit": "150000", "tiers": [["100000", "1.00"], ["125000", "0.50"], ["150000", "0.25"]]}, "authority": "https://www.nj.gov/treasury/taxation/njit1.shtml", "locator": "N.J.S.A. 54A:6-10"},
+    "nj_child_credit": {"value": {"max_age": 5, "tiers": [["30000", "1000"], ["40000", "800"], ["50000", "600"], ["60000", "400"], ["80000", "200"]]}, "authority": "https://www.nj.gov/treasury/taxation/njchildtaxcredit.shtml", "locator": "N.J.S.A. 54A:4-17.1"},
+    "nj_529_deduction": {"value": {"max": "10000", "income_limit": "200000"}, "authority": "https://www.nj.gov/treasury/taxation/njit1.shtml", "locator": "P.L. 2021, c.129"},
+    "estimated_tax": {"value": {"min_balance": "400", "safe_harbor_current": "0.80", "safe_harbor_prior": "1.00", "due_dates": ["2026-04-15", "2026-06-15", "2026-09-15", "2027-01-15"]}, "authority": "https://www.nj.gov/treasury/taxation/njit26.shtml", "locator": "N.J.S.A. 54A:9-6"},
+    "inheritance": {"value": {"class_c": [["25000", "0"], ["1100000", "0.11"], ["1400000", "0.13"], ["1700000", "0.14"], [null, "0.16"]], "class_d": [["700000", "0.15"], [null, "0.16"]], "class_d_minimum": "500"}, "authority": "https://www.nj.gov/treasury/taxation/inheritance-estate/inheritance.shtml", "locator": "N.J.S.A. 54:34-2"}
+  }
+}

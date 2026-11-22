@@ -1,0 +1,41 @@
+{
+  "jurisdiction": "US",
+  "tax_year": 2026,
+  "version": "2026.1",
+  "legislation_status": "enacted",
+  "release_note": "Rev. Proc. 2025-32 inflation amounts and Pub. L. 119-21 (OBBBA) provisions first effective for 2026. Draft until a named reviewer approves; verify every amount against the final 2026 forms before approval.",
+  "rules": {
+    "std_deduction": {"value": {"single": "16100", "mfj": "32200", "mfs": "16100", "hoh": "24150", "qss": "32200"}, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "Rev. Proc. 2025-32 sec. 4.14"},
+    "additional_std": {"value": {"married": "1650", "unmarried": "2050"}, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "Rev. Proc. 2025-32 sec. 4.14(3)"},
+    "brackets": {"value": {
+      "single": [["12400", "0.10"], ["50400", "0.12"], ["105700", "0.22"], ["201775", "0.24"], ["256225", "0.32"], ["640600", "0.35"], [null, "0.37"]],
+      "mfj": [["24800", "0.10"], ["100800", "0.12"], ["211400", "0.22"], ["403550", "0.24"], ["512450", "0.32"], ["768700", "0.35"], [null, "0.37"]],
+      "mfs": [["12400", "0.10"], ["50400", "0.12"], ["105700", "0.22"], ["201775", "0.24"], ["256225", "0.32"], ["384350", "0.35"], [null, "0.37"]],
+      "hoh": [["17700", "0.10"], ["67450", "0.12"], ["105700", "0.22"], ["201750", "0.24"], ["256200", "0.32"], ["640600", "0.35"], [null, "0.37"]]
+    }, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "Rev. Proc. 2025-32 sec. 4.01"},
+    "cg_thresholds": {"value": {
+      "single": ["49450", "545500"], "mfj": ["98900", "613700"], "mfs": ["49450", "306850"], "hoh": ["66200", "579600"]
+    }, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "Rev. Proc. 2025-32 sec. 4.03"},
+    "unrecaptured_1250_rate": {"value": "0.25", "authority": "https://www.law.cornell.edu/uscode/text/26/1", "locator": "IRC 1(h)(1)(E)"},
+    "collectibles_rate": {"value": "0.28", "authority": "https://www.law.cornell.edu/uscode/text/26/1", "locator": "IRC 1(h)(4)"},
+    "niit": {"value": {"rate": "0.038", "threshold": {"single": "200000", "hoh": "200000", "mfj": "250000", "qss": "250000", "mfs": "125000"}}, "authority": "https://www.irs.gov/forms-pubs/about-form-8960", "locator": "IRC 1411"},
+    "addl_medicare": {"value": {"rate": "0.009", "threshold": {"single": "200000", "hoh": "200000", "mfj": "250000", "qss": "250000", "mfs": "125000"}}, "authority": "https://www.irs.gov/forms-pubs/about-form-8959", "locator": "IRC 3101(b)(2)"},
+    "payroll": {"value": {"ss_wage_base": "184500", "ss_rate": "0.062", "medicare_rate": "0.0145", "se_ss_rate": "0.124", "se_medicare_rate": "0.029", "se_factor": "0.9235", "se_min": "400"}, "authority": "https://www.ssa.gov/oact/cola/cbb.html", "locator": "SSA contribution and benefit base 2026"},
+    "amt": {"value": {"exemption": {"single": "90100", "hoh": "90100", "mfj": "140200", "qss": "140200", "mfs": "70100"}, "phaseout_start": {"single": "500000", "hoh": "500000", "mfj": "1000000", "qss": "1000000", "mfs": "500000"}, "phaseout_rate": "0.50", "rate_break": {"default": "244500", "mfs": "122250"}}, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "Rev. Proc. 2025-32 sec. 4.09; IRC 55(d) per P.L. 119-21 sec. 70107"},
+    "ctc": {"value": {"per_child": "2200", "odc": "500", "phaseout_start": {"mfj": "400000", "default": "200000"}, "phaseout_step": "1000", "phaseout_amount": "50", "refundable_max": "1700", "earned_floor": "2500", "earned_rate": "0.15"}, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "IRC 24; Rev. Proc. 2025-32 sec. 4.05"},
+    "salt": {"value": {"cap": {"default": "40400", "mfs": "20200"}, "phaseout_start": {"default": "505000", "mfs": "252500"}, "phaseout_rate": "0.30", "floor": {"default": "10000", "mfs": "5000"}}, "authority": "https://www.irs.gov/instructions/i1040sca", "locator": "IRC 164(b)(6) per P.L. 119-21 sec. 70120"},
+    "senior_deduction": {"value": {"amount": "6000", "age": 65, "phaseout_start": {"default": "75000", "mfj": "150000"}, "phaseout_rate": "0.06"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 151(d)(5)(C)"},
+    "tips_deduction": {"value": {"max": "25000", "phaseout_start": {"default": "150000", "mfj": "300000"}, "per_1000": "100"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 224"},
+    "overtime_deduction": {"value": {"max": {"default": "12500", "mfj": "25000"}, "phaseout_start": {"default": "150000", "mfj": "300000"}, "per_1000": "100"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 225"},
+    "car_loan_interest": {"value": {"max": "10000", "phaseout_start": {"default": "100000", "mfj": "200000"}, "per_1000": "200"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 163(h)(4)"},
+    "qbi": {"value": {"rate": "0.20", "threshold": {"default": "201750", "mfj": "403500"}, "phase_in": {"default": "75000", "mfj": "150000"}}, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "IRC 199A(b)(3) per P.L. 119-21 sec. 70105; Rev. Proc. 2025-32"},
+    "itemized": {"value": {"medical_floor": "0.075", "charity_cash_limit": "0.60", "charity_floor": "0.005", "mortgage_debt_limit": "750000", "nonitemizer_charity": {"default": "1000", "mfj": "2000"}, "limitation_rate": "0.35"}, "authority": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "locator": "IRC 170(b)(1)(I), 170(p), 68 per P.L. 119-21 secs. 70424, 70425, 70111"},
+    "capital_loss_limit": {"value": {"default": "3000", "mfs": "1500"}, "authority": "https://www.law.cornell.edu/uscode/text/26/1211", "locator": "IRC 1211(b)"},
+    "passive_allowance": {"value": {"amount": "25000", "mfs_apart": "12500", "phaseout_start": "100000", "phaseout_end": "150000", "rate": "0.50"}, "authority": "https://www.irs.gov/publications/p925", "locator": "IRC 469(i)"},
+    "ss_taxability": {"value": {"base1": {"default": "25000", "mfj": "32000", "mfs": "0"}, "base2": {"default": "34000", "mfj": "44000", "mfs": "0"}}, "authority": "https://www.irs.gov/publications/p915", "locator": "IRC 86"},
+    "estimated_tax": {"value": {"current_year_pct": "0.90", "prior_year_pct": "1.00", "prior_year_high_pct": "1.10", "high_agi": {"default": "150000", "mfs": "75000"}, "underpayment_rate": "0.07", "min_balance": "1000", "due_dates": ["2026-04-15", "2026-06-15", "2026-09-15", "2027-01-15"]}, "authority": "https://www.irs.gov/forms-pubs/about-form-2210", "locator": "IRC 6654"},
+    "contribution_limits": {"value": {"401k": "24500", "401k_catchup": "8000", "401k_catchup_60_63": "11250", "415c": "72000", "ira": "7500", "ira_catchup": "1100", "hsa_self": "4400", "hsa_family": "8750", "hsa_catchup": "1000", "sep_pct": "0.25", "comp_limit": "360000"}, "authority": "https://www.irs.gov/newsroom/401k-limit-increases-to-24500-for-2026-ira-limit-increases-to-7500", "locator": "IRS Notice 2025-67"},
+    "section_179": {"value": {"limit": "2560000", "phaseout": "4090000", "bonus_rate": "1.00"}, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "Rev. Proc. 2025-32 sec. 4.21"},
+    "estate_gift": {"value": {"exemption": "15000000", "annual_exclusion": "19000", "top_rate": "0.40"}, "authority": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026", "locator": "IRC 2010(c)(3) per P.L. 119-21 sec. 70106"}
+  }
+}

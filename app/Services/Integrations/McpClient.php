@@ -67,7 +67,13 @@ final class McpClient
             throw new IntegrationError('tool_error', "{$tool}: ".mb_substr(implode(' ', $texts) ?: 'tool reported an error', 0, 300));
         }
         if (isset($res['structuredContent']) && is_array($res['structuredContent'])) {
-            return $res['structuredContent'];
+            $sc = $res['structuredContent'];
+            // FastMCP-style servers (Monarch) wrap a JSON string return value as {"result": "<json>"}.
+            if (count($sc) === 1 && is_string($sc['result'] ?? null) && is_array($inner = json_decode($sc['result'], true))) {
+                return $inner;
+            }
+
+            return $sc;
         }
         $decoded = [];
         foreach ($texts as $t) {

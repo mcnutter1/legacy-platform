@@ -93,6 +93,35 @@ abstract class Provider
         return false;
     }
 
+    /** Why an account row should not become a Legacy account (null = import it). */
+    public function skipReason(array $row): ?string
+    {
+        return $this->isAggregate($row) ? 'combined/aggregate portfolio' : null;
+    }
+
+    /** Values for a required enum such as an "intent" parameter, per role. */
+    public function preferredEnums(string $role): array
+    {
+        return [];
+    }
+
+    /**
+     * How to scope a per-account call for a role: ['param' => name, 'by' => 'id'|'name', 'kinds' => list|null], or null for one call.
+     * Default: a tool with an account_id/portfolio_id parameter is called once per account.
+     */
+    public function perAccount(string $role, array $schema): ?array
+    {
+        $key = \App\Services\Integrations\Args::parentKey($schema);
+
+        return $key ? ['param' => $key, 'by' => 'id', 'kinds' => null] : null;
+    }
+
+    /** Split or filter raw holding rows for the account a call was scoped to ($owner external id, or null). */
+    public function expandHoldings(array $rows, ?string $owner): array
+    {
+        return $rows;
+    }
+
     public function account(array $r): ?array
     {
         $id = Shape::str($r, ['id', 'account_id', 'portfolio_id', 'uuid'], 191);
@@ -124,7 +153,7 @@ abstract class Provider
         $symbol = Shape::str($r, ['security.ticker', 'ticker', 'symbol', 'asset.symbol', 'asset.ticker', 'instrument.symbol', 'security.symbol'], 32);
         $name = Shape::str($r, ['security.name', 'name', 'asset.name', 'description', 'instrument.name', 'title']);
         $qty = Shape::dec($r, ['quantity', 'shares', 'units', 'amount_of_shares', 'qty']);
-        $type = strtolower((string) Shape::str($r, ['security.type', 'type', 'asset.type', 'asset_type', 'kind']));
+        $type = strtolower((string) Shape::str($r, ['security.type', 'security_type', 'type', 'asset.type', 'asset_type', 'kind']));
         if (! $symbol && $name && preg_match('/\bcash\b|money market|sweep/i', $name)) {
             $symbol = 'CASH';
             $type = 'cash';
@@ -219,13 +248,14 @@ abstract class Provider
             str_contains($s, 'crypto') => 'crypto',
             str_contains($s, 'mortgage') => 'mortgage',
             str_contains($s, 'heloc') || str_contains($s, 'home equity') => 'heloc',
+            str_contains($s, 'line of credit') || str_contains($s, 'construction') => 'loan',
             str_contains($s, 'credit') => 'credit_card',
             str_contains($s, 'loan') || str_contains($s, 'student') || str_contains($s, 'auto') => 'loan',
             str_contains($s, 'money market') => 'money_market',
             str_contains($s, 'cd') && ! str_contains($s, 'card') => 'cd',
             str_contains($s, 'saving') => 'savings',
             str_contains($s, 'checking') || str_contains($s, 'depository') || str_contains($s, 'cash') => 'checking',
-            str_contains($s, 'brokerage') || str_contains($s, 'invest') || str_contains($s, 'portfolio') => 'brokerage',
+            str_contains($s, 'brokerage') || str_contains($s, 'invest') || str_contains($s, 'portfolio') || str_contains($s, 'stock plan') => 'brokerage',
             default => 'other',
         };
     }

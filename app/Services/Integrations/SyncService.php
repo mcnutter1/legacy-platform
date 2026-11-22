@@ -33,15 +33,15 @@ final class SyncService
             throw new IntegrationError('unsupported', 'No tool is mapped to accounts. Run Test and choose the accounts tool.');
         }
         $issues = [];
-        $args = Args::build($schemas[$map['accounts']] ?? [], ['_limit' => 500]);
+        $args = Args::build($schemas[$map['accounts']] ?? [], ['_limit' => 500, '_prefer' => $p->preferredEnums('accounts')]);
         if ($args === null) {
             throw new IntegrationError('unsupported', "{$map['accounts']} needs parameters Legacy cannot supply.");
         }
         $accounts = [];
-        $skipped = 0;
+        $skipped = [];
         foreach (Shape::records($client->call($map['accounts'], $args), $p->accountKeys()) as $row) {
-            if ($p->isAggregate($row)) {
-                $skipped++;
+            if ($why = $p->skipReason($row)) {
+                $skipped[$why] = ($skipped[$why] ?? 0) + 1;
 
                 continue;
             }
@@ -51,8 +51,8 @@ final class SyncService
                 break;
             }
         }
-        if ($skipped) {
-            $issues[] = "Skipped {$skipped} combined/aggregate portfolio(s).";
+        foreach ($skipped as $why => $n) {
+            $issues[] = "Skipped {$n} account(s): {$why}.";
         }
         $end = now()->toDateString();
         $days = (int) ($cfg['transactions_days'] ?? 90);
@@ -67,37 +67,70 @@ final class SyncService
                 continue;
             }
             $schema = $schemas[$tool] ?? [];
-            $parent = Args::parentKey($schema);
-            $calls = $parent ? array_map(fn ($a) => [$a['external_id'], [$parent => $a['external_id']]], array_values(array_filter($accounts, fn ($a) => ! $a['closed'])))
-                : [[null, []]];
+            $per = $p->perAccount($role, $schema);
+            $calls = [[null, []]];
+            if ($per) {
+                $targets = array_filter($accounts, fn ($a) => ! $a['closed'] && ($per['kinds'] === null || in_array($a['kind'], $per['kinds'], true)));
+                $calls = array_map(fn ($a) => [$a['external_id'], [$per['param'] => $per['by'] === 'name' ? $a['name'] : $a['external_id']]], array_values($targets));
+            }
+            $paged = isset($schema['properties']['offset']);
             foreach (array_slice($calls, 0, 60) as [$owner, $values]) {
-                $args = Args::build($schema, $values + $extra + ['_limit' => 500]);
-                if ($args === null) {
-                    $issues[] = "{$tool} needs parameters Legacy cannot supply; {$role} skipped.";
-                    break;
-                }
-                try {
-                    $rows = Shape::records($client->call($tool, $args), [$role, 'positions', 'items', 'data', 'results']);
-                } catch (IntegrationError $e) {
-                    if ($e->reason === 'unauthorized') {
-                        throw $e;
+                $offset = 0;
+                for ($page = 0; $page < ($paged ? 20 : 1); $page++) {
+                    $args = Args::build($schema, $values + $extra + ['_limit' => 500, '_prefer' => $p->preferredEnums($role)] + ($paged && $offset ? ['offset' => $offset] : []));
+                    if ($args === null) {
+                        $issues[] = "{$tool} needs parameters Legacy cannot supply; {$role} skipped.";
+                        break 2;
                     }
-                    $issues[] = "{$tool}: {$e->getMessage()}";
+                    try {
+                        $payload = $client->call($tool, $args);
+                    } catch (IntegrationError $e) {
+                        if ($e->reason === 'unauthorized') {
+                            throw $e;
+                        }
+                        $issues[] = "{$tool}: {$e->getMessage()}";
 
-                    continue;
-                }
-                foreach ($rows as $row) {
-                    $item = $role === 'holdings' ? $p->holding($row) : $p->transaction($row);
-                    if (! $item) {
-                        continue;
+                        continue 2;
                     }
-                    $ref = $owner ?? $item['account_ref'] ?? (count($accounts) === 1 ? array_key_first($accounts) : null);
-                    if ($ref === null || ! isset($accounts[$ref])) {
-                        $issues[] = "A {$role} row could not be tied to an account.";
+                    $rows = Shape::records($payload, [$role, 'investments', 'positions', 'items', 'data', 'results']);
+                    if ($role === 'holdings') {
+                        $rows = $p->expandHoldings($rows, $owner);
+                    }
+                    foreach ($rows as $row) {
+                        $item = $role === 'holdings' ? $p->holding($row) : $p->transaction($row);
+                        if (! $item) {
+                            continue;
+                        }
+                        $ref = $owner ?? $item['account_ref'] ?? (count($accounts) === 1 ? array_key_first($accounts) : null);
+                        if ($ref === null || ! isset($accounts[$ref])) {
+                            $issues[] = "A {$role} row could not be tied to an account.";
 
-                        continue;
+                            continue;
+                        }
+                        $accounts[$ref][$role][] = $item;
                     }
-                    $accounts[$ref][$role][] = $item;
+                    $next = is_array($payload) ? ($payload['next_offset'] ?? null) : null;
+                    if (! $paged || ! is_int($next) || $next <= $offset) {
+                        break;
+                    }
+                    $offset = $next;
+                }
+            }
+            if ($role === 'holdings' && ($per['by'] ?? null) === 'name') {
+                // Name filters can match more than one account; a position reported identically under several is not attributable.
+                $seen = [];
+                foreach ($accounts as $ref => $acc) {
+                    foreach ($acc['holdings'] as $h) {
+                        $seen[$h['symbol'].'|'.$h['quantity'].'|'.$h['market_value']][$ref] = true;
+                    }
+                }
+                $ambiguous = array_filter($seen, fn ($refs) => count($refs) > 1);
+                if ($ambiguous) {
+                    foreach ($accounts as $ref => &$acc) {
+                        $acc['holdings'] = array_values(array_filter($acc['holdings'], fn ($h) => ! isset($ambiguous[$h['symbol'].'|'.$h['quantity'].'|'.$h['market_value']])));
+                    }
+                    unset($acc);
+                    $issues[] = count($ambiguous).' position(s) matched more than one account by name and were left out.';
                 }
             }
         }

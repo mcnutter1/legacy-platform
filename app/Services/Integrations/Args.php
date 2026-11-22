@@ -34,13 +34,19 @@ final class Args
             $spec = is_array($spec) ? $spec : [];
             if (array_key_exists($name, $values)) {
                 $v = $values[$name];
-                $out[$name] = (($spec['type'] ?? null) === 'array' && ! is_array($v)) ? [$v] : $v;
+                $isArray = ($spec['type'] ?? null) === 'array' || in_array('array', array_column((array) ($spec['anyOf'] ?? []), 'type'), true);
+                $out[$name] = ($isArray && ! is_array($v)) ? [$v] : $v;
             } elseif (in_array($n, self::START, true) && isset($values['_start'])) {
                 $out[$name] = self::date($values['_start'], $spec);
             } elseif (in_array($n, self::END, true) && isset($values['_end'])) {
                 $out[$name] = self::date($values['_end'], $spec);
             } elseif (in_array($n, self::LIMIT, true)) {
-                $out[$name] = min((int) ($values['_limit'] ?? 500), (int) ($spec['maximum'] ?? 500));
+                $out[$name] = min((int) ($values['_limit'] ?? 500), self::maximum($spec));
+            } elseif (in_array($name, $required, true) && is_array($spec['enum'] ?? null) && $spec['enum']) {
+                // Required enums such as Monarch's "intent": use the caller's preferred value when offered, else the first specific one.
+                $prefer = array_values(array_intersect((array) ($values['_prefer'] ?? []), $spec['enum']));
+                $specific = array_values(array_filter($spec['enum'], fn ($e) => ! in_array($e, ['other', 'unknown', 'none'], true)));
+                $out[$name] = $prefer[0] ?? $specific[0] ?? $spec['enum'][0];
             }
         }
         foreach ($required as $r) {
@@ -50,6 +56,16 @@ final class Args
         }
 
         return $out;
+    }
+
+    /** Declared maximum, else one stated in the description ("1-100"), else 500. */
+    private static function maximum(array $spec): int
+    {
+        if (isset($spec['maximum'])) {
+            return (int) $spec['maximum'];
+        }
+
+        return preg_match('/\b1\s*[-–]\s*(\d{1,4})\b/', (string) ($spec['description'] ?? ''), $m) ? (int) $m[1] : 500;
     }
 
     private static function date(string $ymd, array $spec): string

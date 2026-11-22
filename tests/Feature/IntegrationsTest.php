@@ -22,6 +22,11 @@ class IntegrationsTest extends TestCase
 
     private bool $monarchWebApproved = true;
 
+    /** Mimic Monarch's live server: PascalCase tools, a required "intent" enum, {"result": "<json>"} payloads, offset paging. */
+    private bool $monarchLive = false;
+
+    private array $monarchCalls = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -89,6 +94,9 @@ class IntegrationsTest extends TestCase
             if (($r->header('Authorization')[0] ?? '') !== 'Bearer mon-access') {
                 return Http::response(['error' => 'invalid_token'], 401);
             }
+            if ($this->monarchLive) {
+                return $this->monarchLiveServer($r);
+            }
 
             return $this->rpc($r, [
                 ['name' => 'get_accounts', 'inputSchema' => ['type' => 'object', 'properties' => new \stdClass]],
@@ -116,7 +124,7 @@ class IntegrationsTest extends TestCase
         return Http::response('unexpected '.$url, 500);
     }
 
-    private function rpc(Request $r, array $tools, callable $call, bool $sse = false)
+    private function rpc(Request $r, array $tools, callable $call, bool $sse = false, bool $wrapped = false)
     {
         $m = $r->data();
         if (! isset($m['id'])) {
@@ -125,13 +133,61 @@ class IntegrationsTest extends TestCase
         $result = match ($m['method']) {
             'initialize' => ['protocolVersion' => '2025-06-18', 'serverInfo' => ['name' => 'fake', 'version' => '1'], 'capabilities' => ['tools' => new \stdClass]],
             'tools/list' => ['tools' => $tools],
-            // Text content carrying JSON, as most servers return it.
-            'tools/call' => ['content' => [['type' => 'text', 'text' => json_encode($call($m['params']['name'], $m['params']['arguments'] ?? []))]]],
+            // Text content carrying JSON, as most servers return it; FastMCP also wraps it as structuredContent.result.
+            'tools/call' => (function () use ($call, $m, $wrapped) {
+                $json = json_encode($call($m['params']['name'], $m['params']['arguments'] ?? []));
+
+                return ['content' => [['type' => 'text', 'text' => $json]]] + ($wrapped ? ['structuredContent' => ['result' => $json]] : []);
+            })(),
         };
         $msg = json_encode(['jsonrpc' => '2.0', 'id' => $m['id'], 'result' => $result]);
 
         return $sse ? Http::response("event: message\ndata: {$msg}\n\n", 200, ['Content-Type' => 'text/event-stream', 'Mcp-Session-Id' => 'sess-1'])
             : Http::response($msg, 200, ['Content-Type' => 'application/json', 'Mcp-Session-Id' => 'sess-2']);
+    }
+
+    private function monarchLiveServer(Request $r)
+    {
+        $intent = ['type' => 'string', 'enum' => ['budgeting', 'spending_analysis', 'investment_tracking', 'net_worth_tracking', 'organizing_finances', 'other']];
+        $tools = [
+            ['name' => 'GetAccounts', 'inputSchema' => ['type' => 'object', 'required' => ['intent'], 'properties' => ['intent' => $intent, 'accounts' => ['anyOf' => [['type' => 'array'], ['type' => 'null']]]]]],
+            ['name' => 'GetInvestments', 'inputSchema' => ['type' => 'object', 'required' => ['intent'], 'properties' => ['intent' => $intent, 'accounts' => ['anyOf' => [['type' => 'array'], ['type' => 'null']]],
+                'start_date' => ['anyOf' => [['type' => 'string'], ['type' => 'null']]]]]],
+            ['name' => 'GetTransactions', 'inputSchema' => ['type' => 'object', 'required' => ['intent', 'start_date', 'end_date'], 'properties' => ['intent' => $intent,
+                'start_date' => ['type' => 'string'], 'end_date' => ['type' => 'string'], 'limit' => ['type' => 'integer', 'description' => 'maximum transactions to return (1-100, default 50).'],
+                'offset' => ['type' => 'integer']]]],
+            ['name' => 'CreateTransaction', 'inputSchema' => ['type' => 'object', 'required' => ['intent'], 'properties' => ['intent' => $intent]]],
+        ];
+        $exmpl = ['ticker' => 'EXMPL', 'quantity' => 15, 'value' => 750.0, 'price' => 50.0, 'security_type' => 'equity',
+            'account_holdings' => [['account_id' => 'a1', 'account_name' => 'Example Brokerage', 'quantity' => 10, 'value' => 500.0], ['account_id' => 'a5', 'account_name' => 'Example 401k', 'quantity' => 5, 'value' => 250.0]]];
+
+        return $this->rpc($r, $tools, function ($tool, $args) use ($exmpl) {
+            $this->monarchCalls[] = [$tool, $args];
+            if (! in_array($args['intent'] ?? null, ['net_worth_tracking', 'investment_tracking', 'organizing_finances'], true)) {
+                return ['error' => 'intent required'];
+            }
+
+            return match ($tool) {
+                'GetAccounts' => ['accounts' => [
+                    ['id' => 'a1', 'name' => 'Example Brokerage', 'type' => 'Brokerage (Taxable)', 'balance' => 30500.0, 'institution' => 'Example Securities'],
+                    ['id' => 'a2', 'name' => 'Everyday Checking', 'type' => 'Checking', 'balance' => 2500.1, 'institution' => 'Example Bank'],
+                    ['id' => 'a3', 'name' => 'Example Card', 'type' => 'Credit Card', 'balance' => -420.5, 'institution' => 'Example Bank'],
+                    ['id' => 'a4', 'name' => 'Example Home', 'type' => 'Primary Home', 'balance' => 650000.0],
+                    ['id' => 'a5', 'name' => 'Example 401k', 'type' => '401k', 'balance' => 12000.0],
+                ], 'total_balance' => 694580.1],
+                'GetInvestments' => ['investments' => match ($args['accounts'][0] ?? null) {
+                    'Example Brokerage' => [['ticker' => 'VTI', 'quantity' => 100, 'value' => 30000.0, 'price' => 300.0, 'security_type' => 'etf', 'account_holdings' => []], $exmpl],
+                    'Example 401k' => [$exmpl, ['ticker' => null, 'quantity' => 11750, 'value' => 11750.0, 'security_type' => 'cash', 'account_holdings' => []]],
+                    default => [],
+                }],
+                'GetTransactions' => ($args['limit'] ?? 0) > 100 ? ['error' => 'limit too large'] : match ((int) ($args['offset'] ?? 0)) {
+                    0 => ['transactions' => [['id' => 't-1', 'date' => now()->subDays(3)->toDateString(), 'pending' => false, 'merchant' => 'Example Grocer', 'amount' => -42.5, 'account' => 'Everyday Checking', 'account_id' => 'a2']],
+                        'truncated' => true, 'next_offset' => 1],
+                    default => ['transactions' => [['id' => 't-2', 'date' => now()->subDays(1)->toDateString(), 'pending' => false, 'merchant' => 'Example Employer', 'amount' => 3100.0, 'account_id' => 'a2']], 'truncated' => false],
+                },
+                default => [],
+            };
+        }, wrapped: true);
     }
 
     private function work(): void
@@ -305,6 +361,31 @@ class IntegrationsTest extends TestCase
         $this->signIn($u)->send('POST', $this->wsUrl($ws, "integrations/{$snow}/sync"))->assertStatus(202);
         $this->work();
         $this->assertEquals(12, (float) DB::table('holdings')->where('account_id', $brokerage->id)->where('instrument_id', DB::table('instruments')->where('symbol', 'EXMPL')->value('id'))->value('quantity'));
+    }
+
+    public function test_monarch_live_tool_shapes_intent_wrapped_results_per_account_holdings_and_paging(): void
+    {
+        $this->monarchLive = true;
+        $u = $this->makeUser('owner');
+        [$ws, , $joint] = $this->makeWorkspace($u);
+        $mon = $this->monarchConnection($ws, $u, $joint->id);
+        $this->assertSame(['accounts' => 'GetAccounts', 'holdings' => 'GetInvestments', 'transactions' => 'GetTransactions'],
+            json_decode(DB::table('source_connections')->where('id', $mon)->value('tool_map'), true));
+        $this->work();
+        $byName = DB::table('accounts')->get()->keyBy('name');
+        $this->assertEqualsCanonicalizing(['Example Brokerage', 'Everyday Checking', 'Example Card', 'Example 401k'], $byName->keys()->all(), 'home skipped');
+        $this->assertSame(['credit_card', 1], [$byName['Example Card']->kind, (int) $byName['Example Card']->is_liability]);
+        $this->assertSame('401k', $byName['Example 401k']->kind);
+        $qty = fn ($acct, $sym) => (float) DB::table('holdings')->where('account_id', $byName[$acct]->id)
+            ->where('instrument_id', DB::table('instruments')->where('symbol', $sym)->value('id'))->value('quantity');
+        $this->assertEquals([100, 10, 5, 11750], [$qty('Example Brokerage', 'VTI'), $qty('Example Brokerage', 'EXMPL'), $qty('Example 401k', 'EXMPL'), $qty('Example 401k', 'CASH')]);
+        $this->assertSame(2, (int) DB::table('import_batches')->where('connection_id', $mon)->value('row_count'), 'both transaction pages staged');
+        foreach ($this->monarchCalls as [$tool, $args]) {
+            $this->assertArrayHasKey('intent', $args, $tool);
+        }
+        $this->assertSame(['investment_tracking'], array_values(array_unique(array_map(fn ($c) => $c[1]['intent'], array_filter($this->monarchCalls, fn ($c) => $c[0] === 'GetInvestments')))));
+        $this->assertSame([100], array_values(array_unique(array_map(fn ($c) => $c[1]['limit'], array_filter($this->monarchCalls, fn ($c) => $c[0] === 'GetTransactions')))));
+        $this->assertNotContains('CreateTransaction', array_column($this->monarchCalls, 0), 'write tools are never called');
     }
 
     public function test_ambiguous_match_is_flagged_and_can_be_merged(): void

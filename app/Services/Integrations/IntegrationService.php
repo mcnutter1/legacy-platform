@@ -252,6 +252,12 @@ final class IntegrationService
         $names = array_column($tools, 'name');
         $stale = array_filter($current, fn ($t) => $t !== null && ! in_array($t, $names, true));
         $map = ($current && ! $stale) ? $current : $p->suggestTools($tools);
+        // Fill roles left empty earlier (e.g. a holdings tool recognized after an update) without overriding user choices.
+        foreach ($p->suggestTools($tools) as $role => $tool) {
+            if (($map[$role] ?? null) === null && $tool !== null) {
+                $map[$role] = $tool;
+            }
+        }
         $changed = $map !== $current;
         $this->update($c, ['tool_catalog' => json_encode($tools), 'tool_map' => json_encode($map), 'last_error' => null,
             'status' => $c->approved_at && ! $changed ? 'active' : 'needs_review'] + ($changed ? ['approved_at' => null, 'approved_by' => null] : []));

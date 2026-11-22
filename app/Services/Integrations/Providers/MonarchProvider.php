@@ -2,6 +2,8 @@
 
 namespace App\Services\Integrations\Providers;
 
+use App\Services\Integrations\Shape;
+
 final class MonarchProvider extends Provider
 {
     public function key(): string
@@ -61,8 +63,84 @@ final class MonarchProvider extends Provider
     {
         return [
             'accounts' => ['/^(get_|list_)?accounts$/i', '/^(get|list)_?accounts?(_list)?$/i', '/accounts?$/i'],
-            'holdings' => ['/^(get_|list_)?(account_)?holdings$/i', '/holding/i', '/positions?/i'],
+            'holdings' => ['/^(get_|list_)?(account_)?holdings$/i', '/holding/i', '/positions?/i', '/^(get|list)_?investments$/i'],
             'transactions' => ['/^(get_|list_|search_)?transactions$/i', '/^(get|list|search)_?transactions?/i', '/transactions?$/i'],
         ];
+    }
+
+    private const INVESTMENT_KINDS = ['brokerage', 'ira', 'roth_ira', 'sep_ira', 'solo_401k', '401k', 'roth_401k', '403b', '457b', 'hsa', '529', 'utma', 'crypto', 'private_fund', 'other'];
+
+    /** Monarch's tools require an "intent" describing the task; these are the honest ones for a read-only sync. */
+    public function preferredEnums(string $role): array
+    {
+        return match ($role) {
+            'accounts' => ['net_worth_tracking'],
+            'holdings' => ['investment_tracking'],
+            default => ['organizing_finances'],
+        };
+    }
+
+    /** Homes and vehicles Monarch tracks as accounts belong under Real estate / Assets, not accounts. Their loans are kept. */
+    public function skipReason(array $row): ?string
+    {
+        $type = (string) Shape::str($row, ['type.name', 'type', 'subtype.name', 'subtype']);
+        $balance = Shape::dec($row, ['balance', 'current_balance', 'display_balance']);
+        if (preg_match('/^(primary home|secondary home|home|real estate|property|rental property|car|vehicle|boat|motorcycle|rv|construction)$/i', trim($type))
+            && ($balance === null || ! str_starts_with($balance, '-'))) {
+            return 'homes and vehicles (track them under Real estate and Assets)';
+        }
+
+        return parent::skipReason($row);
+    }
+
+    public function account(array $r): ?array
+    {
+        $a = parent::account($r);
+        // Monarch signs balances: negative means money owed.
+        if ($a && $a['balance'] !== null && str_starts_with($a['balance'], '-') && ! $a['is_liability']) {
+            $a['is_liability'] = true;
+            $a['kind'] = $a['kind'] === 'other' ? 'loan' : $a['kind'];
+        }
+
+        return $a;
+    }
+
+    /** GetInvestments aggregates by security; filter it by account name and keep each account's own share. */
+    public function perAccount(string $role, array $schema): ?array
+    {
+        if ($role === 'holdings' && isset($schema['properties']['accounts'])) {
+            return ['param' => 'accounts', 'by' => 'name', 'kinds' => self::INVESTMENT_KINDS];
+        }
+
+        return parent::perAccount($role, $schema);
+    }
+
+    public function expandHoldings(array $rows, ?string $owner): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if (empty($row['ticker']) && strtolower((string) ($row['security_type'] ?? '')) === 'cash') {
+                $row['ticker'] = 'CASH';
+            }
+            $split = is_array($row['account_holdings'] ?? null) ? $row['account_holdings'] : [];
+            unset($row['account_holdings']);
+            if (! $split) {
+                $out[] = $row;
+
+                continue;
+            }
+            foreach ($split as $part) {
+                $acct = is_array($part) ? (string) ($part['account_id'] ?? '') : '';
+                if ($acct === '' || ($owner !== null && $acct !== $owner)) {
+                    continue;
+                }
+                $out[] = ['quantity' => $part['quantity'] ?? null, 'value' => $part['value'] ?? null, 'account_id' => $acct] + $row;
+            }
+        }
+
+        return $out;
     }
 }

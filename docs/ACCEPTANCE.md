@@ -19,6 +19,7 @@ automated test yet · **P** = partial / gated as unsupported · **—** = not st
 | 1 | Vault: encryption at rest, quarantine, single-use user-bound downloads, file-type gates, dedupe | V | `tests/Feature/VaultTest.php` |
 | 1 | Imports: Monarch preview → review → commit → replay no-op → reverse | V | `tests/Feature/ImportTest.php`, `runners/tests/test_engines.py` |
 | 1 | Snowball import, transfers pairing, enrich vs duplicate | I / V | runner tests (normalize); pairing implemented in `ImportService` |
+| 1 | Live MCP sources (Monarch OAuth, Snowball key): test, preview, approve, sync, multi-instance, cross-source de-dupe, conflicts, merge, provenance badges | V (faked servers) | `tests/Feature/IntegrationsTest.php`; real tool names/payloads verified only at connect time |
 | 1 | Net worth (one count per asset, liabilities, unvalued, contingent excluded) | I | `NetWorthService`; UI Net worth |
 | 1 | Year close + wealth bridge with residual, close/reopen versioning | I | demo e2e; `YearCloseService` |
 | 2 Tax & earnings | Federal + NJ engine, line map, trace | V | `runners/tests/test_tax.py` (hand-computed MFJ 2025), `ComputeJobsTest` |

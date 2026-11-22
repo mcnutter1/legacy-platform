@@ -35,9 +35,10 @@ final class JobService
         'document.scan' => Handlers\DocumentScanHandler::class,
         'report.build' => Handlers\ReportBuildHandler::class,
         'yearclose.build' => Handlers\YearCloseHandler::class,
+        'integration.sync' => Handlers\IntegrationSyncHandler::class,
     ];
 
-    public const BULK = ['plan.montecarlo', 'plan.stress', 'import.normalize', 'document.extract', 'document.scan', 'report.build', 'yearclose.build', 'tax.strategies'];
+    public const BULK = ['plan.montecarlo', 'plan.stress', 'import.normalize', 'document.extract', 'document.scan', 'report.build', 'yearclose.build', 'tax.strategies', 'integration.sync'];
 
     /** Job-local directory for the job being executed (runner file paths must stay inside it). */
     public static ?string $currentWorkDir = null;

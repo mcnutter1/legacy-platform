@@ -48,8 +48,14 @@ Host: shared McNutt Cloud server (`ubuntu@login.mcnutt.cloud`, 34.234.75.3). App
    (RentCast) and `BRIDGE_ZESTIMATE_TOKEN` (Zillow via Bridge Interactive, requires their data agreement). Set
    `PROPERTY_LOOKUP_ENABLED=false` to disable outbound lookups entirely. AVM results arrive as *proposed* valuations
    that a person must accept.
-5. Escrow `legacy.env` + `backup.key` offline (two places). Configure `OFFSITE_RSYNC_TARGET` for offsite copies.
-6. Have a CPA review and approve tax rule packs (Tax → Rule packs) before relying on "calculated" status.
+5. Live integrations: set `FEATURE_MONARCH_API=true` / `FEATURE_SNOWBALL_API=true`, then in the app open Wealth →
+   Integrations, add a connection and follow the provider steps shown there (Monarch: Connect → sign in → Read only;
+   Snowball: Profile → MCP → Generate key → paste). Test → Preview → Approve. Approved connections sync hourly-checked by
+   `legacy:tick integrations` (default every 24 h per connection) as the approving member; their access is re-checked
+   when the job runs. Staged transactions wait in Imports unless auto-commit is enabled. The Monarch OAuth redirect is
+   `${APP_URL}/integrations/oauth/callback` (registered automatically).
+6. Escrow `legacy.env` + `backup.key` offline (two places). Configure `OFFSITE_RSYNC_TARGET` for offsite copies.
+7. Have a CPA review and approve tax rule packs (Tax → Rule packs) before relying on "calculated" status.
 
 ## SLOs and signals
 p95 authenticated read < 500 ms; jobs visible within one cron cycle; backups daily (RPO 24 h), restore ≤ 4 h (RTO).

@@ -5,6 +5,7 @@ import type { AccessOverview, AnyRecord, FieldMeta, ResourceMeta } from '../api/
 import { useWorkspace } from '../app/workspace';
 import { date, humanize, money, num } from '../lib/format';
 import { Dialog, Empty, ErrorState, FormError, Loading, StatusBadge } from './ui';
+import { recordSources, SourceIcons } from './sources';
 import { useQuery } from '@tanstack/react-query';
 
 const MONEY = new Set(['m']);
@@ -51,15 +52,17 @@ export function CellValue({ field, record }: { field: FieldMeta; record: AnyReco
 
 export function ResourceTable({ meta, rows, onSelect, columns }: { meta: ResourceMeta; rows: AnyRecord[]; onSelect?: (r: AnyRecord) => void; columns?: string[] }) {
   const cols = (columns ?? meta.list).map((c) => meta.fields.find((f) => f.name === c)).filter((f): f is FieldMeta => !!f);
+  const withSources = rows.some((r) => recordSources(r) !== undefined);
   return (
     <div className="table-wrap">
       <table className="data-table">
         <thead>
-          <tr>{cols.map((c) => <th key={c.name} scope="col">{humanize(c.name.replace(/_id$/, ''))}</th>)}</tr>
+          <tr>{withSources && <th scope="col" className="w-0">Source</th>}{cols.map((c) => <th key={c.name} scope="col">{humanize(c.name.replace(/_id$/, ''))}</th>)}</tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id} className={onSelect ? 'cursor-pointer' : ''} onClick={() => onSelect?.(r)}>
+              {withSources && <td><SourceIcons sources={recordSources(r)} size={18} /></td>}
               {cols.map((c, i) => (
                 <td key={c.name} className={MONEY.has(c.type) || DECIMAL.has(c.type) ? 'text-right' : ''}>
                   {i === 0 && onSelect ? (

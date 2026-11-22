@@ -10,7 +10,8 @@ export default function Accounts() {
     <div className="space-y-6">
       <PageHeader eyebrow="Wealth" title="Accounts" description="Bank, brokerage, retirement, education and credit accounts. Open an account for balances, holdings, lots and transactions." />
       <ResourceSection type="accounts" onOpen={(r) => nav(path(`accounts/${r.id}`))} />
-      <ResourceSection type="source_connections" title="Data sources" description="Connections and file profiles. Read-only synchronization; nothing is ever sent to an institution." />
+      <ResourceSection type="source_connections" title="Data sources" description="File profiles and live connections. Read-only synchronization; nothing is ever sent to an institution."
+        extraActions={<button className="btn-secondary btn-sm" onClick={() => nav(path('integrations'))}>Manage live integrations</button>} />
     </div>
   );
 }

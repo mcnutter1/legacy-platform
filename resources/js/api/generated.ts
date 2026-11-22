@@ -423,13 +423,45 @@ export interface SourceConnections {
   updated_at: string | null;
   provider: 'monarch' | 'snowball' | 'invoices' | 'property_manager' | 'bank' | 'broker' | 'payroll' | 'ssa' | 'manual' | 'other';
   label: string;
-  mode?: 'file' | 'api' | null;
+  mode?: 'file' | 'api' | 'mcp' | null;
   status?: string | null;
   config?: unknown | null;
   freshness_hours?: number | null;
   last_sync_at?: string | null;
   last_success_at?: string | null;
   last_error?: string | null;
+  auth_kind?: string | null;
+  server_url?: string | null;
+  credential_hint?: string | null;
+  credential_set_at?: string | null;
+  token_expires_at?: string | null;
+  tool_map?: unknown | null;
+  last_sync_stats?: unknown | null;
+  approved_at?: string | null;
+  sync_interval_hours?: number | null;
+  last_job_id?: string | null;
+}
+
+export interface SourceDiscrepancies {
+  id: Ulid;
+  type: 'source_discrepancies';
+  scope_id?: Ulid;
+  edit_version: number;
+  _title: string | null;
+  _redacted?: string[];
+  created_at: string | null;
+  updated_at: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  kind?: string | null;
+  field?: string | null;
+  observed?: unknown | null;
+  difference?: Decimal | null;
+  candidate_id?: string | null;
+  status?: string | null;
+  resolution?: string | null;
+  resolved_at?: string | null;
+  last_seen_at?: string | null;
 }
 
 export interface Accounts {
@@ -1592,6 +1624,7 @@ export interface ResourceTypes {
   estate_scenarios: EstateScenarios;
   estate_runs: EstateRuns;
   source_connections: SourceConnections;
+  source_discrepancies: SourceDiscrepancies;
   accounts: Accounts;
   transactions: Transactions;
   balance_snapshots: BalanceSnapshots;

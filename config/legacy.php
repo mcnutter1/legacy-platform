@@ -109,6 +109,11 @@ return [
         'max_results' => 50,
     ],
 
+    'integrations' => [
+        'timeout' => (int) env('INTEGRATIONS_TIMEOUT', 30),
+        'max_response_bytes' => 8 * 1024 * 1024,
+    ],
+
     'features' => [
         'connector_snowball_api' => (bool) env('FEATURE_SNOWBALL_API', false),
         'connector_monarch_api' => (bool) env('FEATURE_MONARCH_API', false),

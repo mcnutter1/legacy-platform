@@ -47,5 +47,12 @@ access grants, OAuth tokens, `APP_KEY`, `VAULT_ROOT_KEY`, backup key, DB credent
   `services2.arcgis.com` (NJOGIS parcels), and to `api.rentcast.io` / `api.bridgedataoutput.com` only when their keys are
   set. Results are cached 24 h; owner names are not stored. Zillow, Realtor.com and the Monmouth/Ocean clerk systems are
   outbound links only (no scraping). Requests are rate-limited (20/min/user) and require real-estate write access.
+- MCP integrations (Monarch, Snowball) call only allow-listed hosts (`api.monarch.com`, `snowball-analytics.com`); server URLs
+  and every OAuth endpoint the provider advertises are checked against that list, redirects are not followed. Monarch uses
+  OAuth 2.1 + PKCE with dynamic client registration and requests only `mcp:read`; Snowball keys are sent only in the
+  `X-API-Key` header (the key-in-URL form is rejected). Credentials/tokens are encrypted with `APP_KEY` in
+  `source_connections.credential_encrypted`, never returned by the API (only a short hint), and entering or approving them
+  requires step-up. Tool output is parsed as data only; nothing is forwarded to a model. Rotating `APP_KEY` requires
+  re-entering integration credentials.
 - MFA at McNutt Cloud is not asserted in the SSO payload, hence the app's own TOTP step-up.
 - Backups exclude `legacy.env` by design; losing the escrowed env makes vault files unrecoverable.

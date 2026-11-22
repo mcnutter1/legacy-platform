@@ -675,6 +675,114 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/accounts/{account}/authority": {
+            "post": {
+                "operationId": "post_workspaces_workspace_accounts_account_authority",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/accounts/{account}/merge": {
+            "post": {
+                "operationId": "post_workspaces_workspace_accounts_account_merge",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/accounts/{account}/sources": {
+            "get": {
+                "operationId": "get_workspaces_workspace_accounts_account_sources",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/collateral/{type}/{id}": {
             "get": {
                 "operationId": "get_workspaces_workspace_collateral_type_id",
@@ -1645,6 +1753,464 @@
                     },
                     {
                         "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations": {
+            "get": {
+                "operationId": "get_workspaces_workspace_integrations",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            },
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}": {
+            "get": {
+                "operationId": "get_workspaces_workspace_integrations_connection",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            },
+            "patch": {
+                "operationId": "patch_workspaces_workspace_integrations_connection",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "$ref": "#/components/parameters/IfMatch"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/approve": {
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations_connection_approve",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/disconnect": {
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations_connection_disconnect",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/key": {
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations_connection_key",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/oauth/complete": {
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations_connection_oauth_complete",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/oauth/start": {
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations_connection_oauth_start",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/preview": {
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations_connection_preview",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/sync": {
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations_connection_sync",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/test": {
+            "post": {
+                "operationId": "post_workspaces_workspace_integrations_connection_test",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/integrations/{connection}/tools": {
+            "put": {
+                "operationId": "put_workspaces_workspace_integrations_connection_tools",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "connection",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -2747,6 +3313,43 @@
                 "parameters": [
                     {
                         "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/source-conflicts/{conflict}/resolve": {
+            "post": {
+                "operationId": "post_workspaces_workspace_source_conflicts_conflict_resolve",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "conflict",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -5141,7 +5744,8 @@
                         "type": "string",
                         "enum": [
                             "file",
-                            "api"
+                            "api",
+                            "mcp"
                         ]
                     },
                     "status": {
@@ -5170,6 +5774,54 @@
                     "last_error": {
                         "type": "string",
                         "readOnly": true
+                    },
+                    "auth_kind": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "server_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "credential_hint": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "credential_set_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "token_expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "tool_map": {
+                        "type": [
+                            "object",
+                            "array"
+                        ],
+                        "readOnly": true
+                    },
+                    "last_sync_stats": {
+                        "type": [
+                            "object",
+                            "array"
+                        ],
+                        "readOnly": true
+                    },
+                    "approved_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "sync_interval_hours": {
+                        "type": "integer"
+                    },
+                    "last_job_id": {
+                        "type": "string",
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -5177,6 +5829,78 @@
                     "label"
                 ],
                 "description": "Data sources (ledger)"
+            },
+            "SourceDiscrepancies": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "scope_id": {
+                        "type": "string"
+                    },
+                    "edit_version": {
+                        "type": "integer"
+                    },
+                    "_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "entity_type": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "field": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "observed": {
+                        "type": [
+                            "object",
+                            "array"
+                        ],
+                        "readOnly": true
+                    },
+                    "difference": {
+                        "type": "string",
+                        "description": "Decimal string (quantity)",
+                        "readOnly": true
+                    },
+                    "candidate_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "resolution": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "resolved_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "last_seen_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [],
+                "description": "Source conflicts (ledger)"
             },
             "Accounts": {
                 "type": "object",
@@ -12054,7 +12778,8 @@
                     "readonly": false,
                     "values": [
                         "file",
-                        "api"
+                        "api",
+                        "mcp"
                     ],
                     "ref": null,
                     "poly_type_field": null,
@@ -12113,6 +12838,238 @@
                 {
                     "name": "last_error",
                     "type": "t",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "auth_kind",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "server_url",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "credential_hint",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "credential_set_at",
+                    "type": "dt",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "token_expires_at",
+                    "type": "dt",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "tool_map",
+                    "type": "j",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "last_sync_stats",
+                    "type": "j",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "approved_at",
+                    "type": "dt",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "sync_interval_hours",
+                    "type": "i",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "last_job_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                }
+            ]
+        },
+        "source_discrepancies": {
+            "type": "source_discrepancies",
+            "label": "Source conflicts",
+            "domain": "ledger",
+            "title": null,
+            "list": [
+                "entity_type",
+                "kind",
+                "field",
+                "difference",
+                "status",
+                "last_seen_at"
+            ],
+            "readonly": true,
+            "creatable": false,
+            "parent": null,
+            "unscoped": false,
+            "searchable": false,
+            "date": null,
+            "fields": [
+                {
+                    "name": "entity_type",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "entity_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "kind",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "field",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "observed",
+                    "type": "j",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "difference",
+                    "type": "q",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "candidate_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "status",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "resolution",
+                    "type": "t",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "resolved_at",
+                    "type": "dt",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "last_seen_at",
+                    "type": "dt",
                     "required": false,
                     "readonly": true,
                     "values": null,

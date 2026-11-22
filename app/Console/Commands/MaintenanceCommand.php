@@ -2,18 +2,23 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\JobService;
+use App\Models\Membership;
+use App\Models\User;
+use App\Models\Workspace;
 use App\Services\Notifications\AlertService;
 use App\Services\Notifications\NotificationService;
 use App\Services\OutboxProcessor;
+use App\Support\AccessContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 class MaintenanceCommand extends Command
 {
-    protected $signature = 'legacy:tick {task : outbox|notify|alerts|prune}';
+    protected $signature = 'legacy:tick {task : outbox|notify|alerts|prune|integrations}';
 
-    protected $description = 'Run one bounded maintenance task (outbox dispatch, email delivery, due-date alerts, pruning)';
+    protected $description = 'Run one bounded maintenance task (outbox dispatch, email delivery, due-date alerts, pruning, scheduled integration syncs)';
 
     public function handle(OutboxProcessor $outbox, NotificationService $notify, AlertService $alerts): int
     {
@@ -22,6 +27,7 @@ class MaintenanceCommand extends Command
             'notify' => $notify->dispatch(),
             'alerts' => $alerts->run(),
             'prune' => $this->prune(),
+            'integrations' => $this->integrations(),
             default => ['error' => 'unknown task'],
         };
         if (array_filter($res, fn ($v) => is_int($v) && $v > 0)) {
@@ -29,6 +35,36 @@ class MaintenanceCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function integrations(): array
+    {
+        $queued = 0;
+        $skipped = 0;
+        $due = DB::table('source_connections')->where('mode', 'mcp')->where('status', 'active')->whereNotNull('approved_at')->whereNotNull('credential_encrypted')
+            ->whereNull('archived_at')->get()->filter(fn ($c) => ! $c->last_sync_at || strtotime($c->last_sync_at) <= time() - 3600 * max(1, (int) $c->sync_interval_hours));
+        foreach ($due as $c) {
+            $m = Membership::where('workspace_id', $c->workspace_id)->find($c->owner_membership_id);
+            $u = $m ? User::find($m->user_id) : null;
+            $pending = DB::table('compute_jobs')->where('type', 'integration.sync')->where('subject_id', $c->id)->whereIn('status', ['queued', 'leased', 'retryable'])->exists();
+            if (! $m || ! $u || ! $m->isActive() || $u->disabled_at || $pending) {
+                $skipped++;
+
+                continue;
+            }
+            // Runs as the member who approved the connection; their grants are re-checked when the job executes.
+            $ctx = new AccessContext($u, Workspace::findOrFail($c->workspace_id), $m);
+            app()->instance(AccessContext::class, $ctx);
+            try {
+                app(JobService::class)->enqueue($ctx, 'integration.sync', ['connection_id' => $c->id, 'dry_run' => false, 'scheduled' => true], 'source_connection', $c->id, $c->scope_id, 150);
+            } finally {
+                app()->forgetInstance(AccessContext::class);
+            }
+            DB::table('source_connections')->where('id', $c->id)->update(['last_sync_at' => now()]);
+            $queued++;
+        }
+
+        return ['integrations_queued' => $queued, 'integrations_skipped' => $skipped];
     }
 
     private function prune(): array

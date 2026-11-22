@@ -230,10 +230,22 @@ final class Registry
                 'domain' => 'ledger', 'label' => 'Data sources', 'title' => 'label',
                 'fields' => [
                     'provider' => 'e:monarch|snowball|invoices|property_manager|bank|broker|payroll|ssa|manual|other!', 'label' => 's!',
-                    'mode' => 'e:file|api', 'status' => '~s', 'config' => 'j', 'freshness_hours' => 'i',
+                    'mode' => 'e:file|api|mcp', 'status' => '~s', 'config' => 'j', 'freshness_hours' => 'i',
                     'last_sync_at' => '~dt', 'last_success_at' => '~dt', 'last_error' => '~t',
+                    'auth_kind' => '~s', 'server_url' => '~s', 'credential_hint' => '~s', 'credential_set_at' => '~dt', 'token_expires_at' => '~dt',
+                    'tool_map' => '~j', 'last_sync_stats' => '~j', 'approved_at' => '~dt', 'sync_interval_hours' => 'i', 'last_job_id' => '~s',
                 ],
+                'heavy' => ['tool_catalog', 'last_preview'],
                 'list' => ['label', 'provider', 'mode', 'status', 'last_success_at'],
+            ],
+            'source_discrepancies' => [
+                'domain' => 'ledger', 'label' => 'Source conflicts', 'readonly' => true, 'order' => ['last_seen_at', 'desc'],
+                'fields' => [
+                    'entity_type' => '~s', 'entity_id' => '~s', 'kind' => '~s', 'field' => '~s', 'observed' => '~j', 'difference' => '~q',
+                    'candidate_id' => '~s', 'status' => '~s', 'resolution' => '~t', 'resolved_at' => '~dt', 'last_seen_at' => '~dt',
+                ],
+                'list' => ['entity_type', 'kind', 'field', 'difference', 'status', 'last_seen_at'],
+                'filters' => ['entity_type', 'entity_id', 'kind'],
             ],
             'accounts' => [
                 'domain' => 'ledger', 'label' => 'Accounts', 'title' => 'name', 'order' => ['name', 'asc'],

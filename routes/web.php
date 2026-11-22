@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccessController;
+use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\PlanningController;
 use App\Http\Controllers\Api\PropertyController;
@@ -133,6 +134,25 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::post('/imports/{batch}/commit', [VaultController::class, 'importCommit']);
         Route::post('/imports/{batch}/reverse', [VaultController::class, 'importReverse']);
         Route::post('/import-profiles/{profile}/approve', [VaultController::class, 'approveProfile']);
+
+        // MCP data-source integrations, provenance and source conflicts
+        Route::get('/integrations', [IntegrationController::class, 'index']);
+        Route::post('/integrations', [IntegrationController::class, 'store']);
+        Route::get('/integrations/{connection}', [IntegrationController::class, 'show'])->where('connection', $ulid);
+        Route::patch('/integrations/{connection}', [IntegrationController::class, 'update'])->where('connection', $ulid);
+        Route::post('/integrations/{connection}/key', [IntegrationController::class, 'key'])->where('connection', $ulid);
+        Route::post('/integrations/{connection}/oauth/start', [IntegrationController::class, 'oauthStart'])->where('connection', $ulid);
+        Route::post('/integrations/{connection}/oauth/complete', [IntegrationController::class, 'oauthComplete'])->where('connection', $ulid);
+        Route::post('/integrations/{connection}/test', [IntegrationController::class, 'test'])->where('connection', $ulid);
+        Route::put('/integrations/{connection}/tools', [IntegrationController::class, 'tools'])->where('connection', $ulid);
+        Route::post('/integrations/{connection}/preview', [IntegrationController::class, 'preview'])->where('connection', $ulid);
+        Route::post('/integrations/{connection}/approve', [IntegrationController::class, 'approve'])->where('connection', $ulid);
+        Route::post('/integrations/{connection}/sync', [IntegrationController::class, 'sync'])->where('connection', $ulid);
+        Route::post('/integrations/{connection}/disconnect', [IntegrationController::class, 'disconnect'])->where('connection', $ulid);
+        Route::get('/accounts/{account}/sources', [IntegrationController::class, 'accountSources'])->where('account', $ulid);
+        Route::post('/accounts/{account}/merge', [IntegrationController::class, 'merge'])->where('account', $ulid);
+        Route::post('/accounts/{account}/authority', [IntegrationController::class, 'authority'])->where('account', $ulid);
+        Route::post('/source-conflicts/{conflict}/resolve', [IntegrationController::class, 'resolveConflict'])->where('conflict', $ulid);
 
         // Tax
         Route::post('/tax/units/{unit}/runs', [TaxController::class, 'run']);

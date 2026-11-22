@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Resources\Registry;
 use App\Resources\ResourceService;
+use App\Services\Integrations\SourceBadges;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,7 +23,7 @@ class ResourceController extends ApiController
         $page = $svc->list($type, $r->query());
 
         return response()->json([
-            'data' => collect($page->items())->map(fn ($row) => $svc->present($def, $row, $r->boolean('full')))->all(),
+            'data' => SourceBadges::attach($type, collect($page->items())->map(fn ($row) => $svc->present($def, $row, $r->boolean('full')))->all()),
             'next_cursor' => $page->nextCursor()?->encode(),
             'prev_cursor' => $page->previousCursor()?->encode(),
         ]);
@@ -34,7 +35,7 @@ class ResourceController extends ApiController
         $def = $svc->definition($type);
         $row = $svc->find($type, $id);
 
-        return $this->ok($svc->present($def, $row), 200, ['ETag' => '"'.$row->edit_version.'"']);
+        return $this->ok(SourceBadges::attach($type, [$svc->present($def, $row)])[0], 200, ['ETag' => '"'.$row->edit_version.'"']);
     }
 
     public function store(Request $r, string $type): JsonResponse

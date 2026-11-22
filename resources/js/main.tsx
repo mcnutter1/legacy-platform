@@ -34,6 +34,7 @@ function RouteError() {
 
 const router = createBrowserRouter([
   { path: '/', element: <Root />, errorElement: <RouteError /> },
+  { path: '/integrations/oauth/callback', element: page(() => import('./pages/IntegrationCallback')), errorElement: <RouteError /> },
   {
     path: '/w/:workspace',
     element: <WorkspaceLayout />,
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
       { path: 'assets', element: page(() => import('./pages/Assets')) },
       { path: 'debts', element: page(() => import('./pages/Debts')) },
       { path: 'imports', element: page(() => import('./pages/Imports')) },
+      { path: 'integrations', element: page(() => import('./pages/Integrations')) },
       { path: 'imports/:batch', element: page(() => import('./pages/ImportBatch')) },
       { path: 'year-close', element: page(() => import('./pages/YearClose')) },
       { path: 'payroll', element: page(() => import('./pages/Payroll')) },

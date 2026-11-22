@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased — live Monarch and Snowball integrations
+
+### Implemented
+- Wealth → Integrations: multiple connections per provider, each with its own scope, credentials, tool mapping and schedule.
+  Monarch via its official MCP server (OAuth 2.1, PKCE, dynamic registration, read-only); Snowball Analytics via its MCP
+  server and a personal key. Per-provider instructions for what to do in the third-party app.
+- Test (tools/list) → preview (dry run, no writes) → approve → sync (`integration.sync` job, hourly scheduler).
+- Cross-source de-dupe: accounts are matched by external id, mask, institution, name, type and balance; confident matches
+  link to the existing account, ambiguous ones are created and flagged as possible duplicates with a merge action.
+  One authoritative source per account writes balances/holdings/transactions; other sources are compared and
+  disagreements (balance, holding quantity, missing position) become source conflicts that can be ignored or resolved by
+  trusting a source.
+- Provenance: accounts, holdings, balances, transactions and lots carry `_sources`; tables and account pages show
+  source icons (authoritative outlined). Account → Sources tab shows what each source last reported.
+- Synced transactions are staged as import batches, so review/commit/reverse and fingerprint/enrich de-dupe apply.
+
+### Verified
+- `IntegrationsTest` (4 tests) against faked Monarch/Snowball MCP servers (JSON and SSE responses).
+
+### Not verified
+- Real tool names and payload shapes for both providers: discovered on Test and shown for approval before any write;
+  field parsing is schema-tolerant but untested against live accounts.
+
 ## Unreleased — property records and secured loans
 
 ### Implemented

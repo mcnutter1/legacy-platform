@@ -110,11 +110,7 @@ final class NotificationService
                 continue;
             }
             try {
-                $res = Http::withToken((string) config('legacy.notifications.api_token'))->timeout((int) config('legacy.notifications.timeout'))->acceptJson()
-                    ->post(rtrim((string) config('legacy.notifications.base_url'), '/').'/api/send.php', array_filter([
-                        'channel' => 'email', 'to' => $to, 'from' => config('legacy.notifications.from'), 'subject' => str_replace(["\r", "\n"], ' ', $subject),
-                        'body' => $html, 'provider' => config('legacy.notifications.provider'),
-                    ]));
+                $res = $this->post($to, $subject, $html);
             } catch (ConnectionException $e) {
                 $timedOut = str_contains($e->getMessage(), 'timed out') || str_contains($e->getMessage(), 'cURL error 28');
                 if ($timedOut) {
@@ -140,6 +136,35 @@ final class NotificationService
         }
 
         return $stats;
+    }
+
+    private function post(string $to, string $subject, string $html): \Illuminate\Http\Client\Response
+    {
+        return Http::withToken((string) config('legacy.notifications.api_token'))->timeout((int) config('legacy.notifications.timeout'))->acceptJson()
+            ->post(rtrim((string) config('legacy.notifications.base_url'), '/').'/api/send.php', array_filter([
+                'channel' => 'email', 'to' => $to, 'from' => config('legacy.notifications.from'), 'subject' => str_replace(["\r", "\n"], ' ', $subject),
+                'body' => $html, 'provider' => config('legacy.notifications.provider'),
+            ]));
+    }
+
+    /** Operator check of the provider contract; the message is generic and contains no family data. */
+    public function sendTest(string $to): array
+    {
+        if (config('legacy.notifications.driver') !== 'mcnutt' || ! config('legacy.notifications.api_token')) {
+            return ['accepted' => false, 'error' => 'Driver is not mcnutt or NOTIFICATIONS_API_TOKEN is missing'];
+        }
+        $html = view('emails.notification', ['title' => 'McNutt Legacy notifications are working', 'body' => 'This is a test message from McNutt Legacy.',
+            'link' => url('/'), 'workspace' => null])->render();
+        try {
+            $res = $this->post($to, 'McNutt Legacy test notification', $html);
+        } catch (ConnectionException $e) {
+            return ['accepted' => false, 'error' => 'Connection failed'];
+        }
+        $json = $res->json();
+        Audit::log('notification.test_sent', 'notification', null, ['status' => $res->status()]);
+
+        return ['accepted' => $res->successful() && is_array($json) && ($json['queued'] ?? $json['ok'] ?? true) !== false, 'status' => $res->status(),
+            'id' => is_array($json) ? ($json['id'] ?? $json['message_id'] ?? null) : null, 'error' => is_array($json) ? ($json['error'] ?? null) : null];
     }
 
     private function mark(string $id, string $status, ?int $code, ?string $error, ?string $msgId): void

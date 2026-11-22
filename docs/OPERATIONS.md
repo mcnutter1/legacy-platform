@@ -31,11 +31,16 @@ Host: shared McNutt Cloud server (`ubuntu@login.mcnutt.cloud`, 34.234.75.3). App
 | Rotate vault key | add old key to `VAULT_PREVIOUS_KEYS=id:b64`, set new `VAULT_ROOT_KEY`/`VAULT_ROOT_KEY_ID`, `artisan config:cache`, `artisan legacy:vault-rewrap` |
 
 ## First production setup (after first deploy)
-1. Register the app in McNutt Cloud: app id `legacy.mcnutt.cloud`, callback `https://legacy.mcnutt.cloud/auth/callback`;
-   put `AUTH_APP_ID` / `AUTH_APP_SECRET` in `legacy.env`.
-2. Set `LEGACY_WORKSPACE_CREATORS=<your McNutt Cloud uid>`; set `NOTIFICATIONS_API_TOKEN` (app-scoped).
-3. `sudo -u mcnutt-legacy php artisan config:cache` (from `current`), sign in, enroll the authenticator (Settings → Security),
-   create the workspace, invite family with audited invitations.
+1. McNutt Cloud app `legacy` is registered (callback `https://legacy.mcnutt.cloud/auth/callback`, MFA required);
+   `AUTH_APP_ID` / `AUTH_APP_SECRET` are set in `legacy.env`.
+2. Role mapping (`LEGACY_ROLE_MAP`, default `admin:administrator,family:member,ice:emergency_contact`): on each sign-in
+   and revalidation, verified McNutt Cloud roles create or update the member's workspace membership. `admin` may also
+   create workspaces (`LEGACY_CREATOR_ROLES`). `guest`/`vault` are unmapped. Family members get only their own private
+   scope; joint data still needs an explicit grant. Losing all mapped roles suspends the membership (never the last
+   administrator). Changing a member's role in Access pins it so McNutt Cloud no longer overrides it.
+   Grant McNutt Cloud app access for `legacy` to each person in the login admin (deny by default).
+3. Set `NOTIFICATIONS_API_TOKEN` (app-scoped), `sudo -u mcnutt-legacy php artisan config:cache` (from `current`), sign in,
+   enroll the authenticator (Settings → Security), create the workspace.
 4. Escrow `legacy.env` + `backup.key` offline (two places). Configure `OFFSITE_RSYNC_TARGET` for offsite copies.
 5. Have a CPA review and approve tax rule packs (Tax → Rule packs) before relying on "calculated" status.
 

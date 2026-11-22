@@ -43,6 +43,8 @@ automated test yet · **P** = partial / gated as unsupported · **—** = not st
 | 5 | Notifications (outbox, dedupe, quiet hours, delivery_unknown) | I | `NotificationService`, `OutboxProcessor` |
 | 5 | Jobs re-authorize at execution; fail closed | V | `ComputeJobsTest::test_jobs_fail_closed…` |
 | 5 | Deploy: read-only preflight on the real host | V (manual run) | `./deploy.sh preflight` → 31 ok, 0 problems (pre-deploy) |
+| 5 | First production deploy: MySQL migrations, TLS, health, auto-revert on failed health, pre-deploy backup, restore drill, sibling apps unaffected | V (manual run 2026-11-22) | `./deploy.sh`, `mcnutt-legacy-restore-check`, HTTPS smoke |
+| 5 | McNutt Cloud role mapping (admin/family/ice → membership roles, suspension, pinning, last-admin guard) | V | `tests/Feature/CentralRoleSyncTest.php` |
 | 5 | Backup/restore drill, rollback, sibling-app checks on host | I | `deploy/server/*` — to verify at first deploy |
 
 ## Frontend

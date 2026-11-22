@@ -156,6 +156,13 @@ class OAuthMcpTest extends TestCase
         $this->assertSame(0, DB::table('payroll_snapshots')->count(), 'nothing changes until approved in the app');
         $again = $call(['employment_id' => $emp, 'idempotency_key' => 'stub-2026-11-13', 'values' => $values])->json('result.structuredContent');
         $this->assertSame(['existing', $ex->id], [$again['status'], $again['draft_id']]);
+        // Clients still holding the older tool list can send values through start_paystub_intake.
+        $viaOld = $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'start_paystub_intake', 'arguments' => ['employment_id' => $emp, 'idempotency_key' => 'old-tool-values',
+            'values' => ['pay_date' => '2026-10-30', 'gross' => ['current' => '5000.00', 'ytd' => '105000.00']]]])->json('result.structuredContent');
+        $this->assertSame('awaiting_review', $viaOld['status']);
+        $link = $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'start_paystub_intake', 'arguments' => ['employment_id' => $emp, 'idempotency_key' => 'old-tool-link']])
+            ->json('result.structuredContent');
+        $this->assertStringContainsString('submit_paystub_values', $link['assistant_hint']);
         $status = $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'get_intake_status', 'arguments' => ['draft_id' => $ex->id]])->json('result.structuredContent');
         $this->assertSame(['needs_review', false], [$status['extraction_status'], $status['paper_copy_attached']]);
 

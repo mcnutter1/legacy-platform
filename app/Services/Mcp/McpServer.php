@@ -56,6 +56,7 @@ final class McpServer
             ['name' => 'start_paystub_intake', 'scope' => 'payroll.intake.write', 'title' => 'Start paystub intake', 'readOnly' => false,
                 'description' => 'Create a draft paystub intake for an employment record when you cannot read the paystub yourself. Returns a short-lived first-party upload link (or accepts the file as base64). If you can read the paystub, prefer submit_paystub_values. Values are confirmed by the user in the app before they change payroll.',
                 'inputSchema' => ['type' => 'object', 'properties' => ['employment_id' => ['type' => 'string'], 'idempotency_key' => ['type' => 'string', 'minLength' => 8, 'maxLength' => 64],
+                    'values' => ['type' => 'object', 'description' => 'Same as submit_paystub_values.values. When given, no upload is needed.'],
                     'file_base64' => ['type' => 'string'], 'filename' => ['type' => 'string']], 'required' => ['employment_id', 'idempotency_key'], 'additionalProperties' => false]],
             ['name' => 'submit_paystub_values', 'scope' => 'payroll.intake.write', 'title' => 'Submit paystub values', 'readOnly' => false,
                 'description' => 'Submit the values you read from a paystub the user shared: pay date, pay period, and for each line the this-period (current) and year-to-date (ytd) amounts. '
@@ -232,6 +233,9 @@ final class McpServer
 
     private function paystubIntake(array $a): array
     {
+        if (! empty($a['values']) && is_array($a['values'])) {
+            return $this->paystubValues($a);
+        }
         $emp = $this->ctx->constrain(DB::table('employments'), 'compensation', 'write')->where('id', (string) $a['employment_id'])->first();
         if (! $emp || ! $this->ctx->can('vault', 'write', $emp->scope_id)) {
             throw ApiError::forbidden('You cannot submit paystubs for that employment.');
@@ -266,7 +270,9 @@ final class McpServer
             'purpose' => 'paystub_mcp_key', 'context' => json_encode(['upload_token_hash' => hash('sha256', $token)]), 'expires_at' => now()->addMinutes(30), 'created_at' => now(), 'updated_at' => now()]);
 
         return ['status' => 'awaiting_upload', 'upload_url' => url('/u/'.$token), 'expires_in_minutes' => 30, 'draft_id' => hash('sha256', $token),
-            'note' => 'Open the link while signed in to McNutt Legacy to upload or photograph the paystub.'];
+            'note' => 'Open the link while signed in to McNutt Legacy to upload or photograph the paystub.',
+            'assistant_hint' => 'If you can read the paystub yourself, do not ask the user to upload it: call submit_paystub_values (or this tool again with a new idempotency_key and "values") '
+                .'with pay_date, period_start, period_end and each line\'s current and ytd amounts. That creates the review draft directly; no file transfer is needed.'];
     }
 
     private function paystubValues(array $a): array
@@ -393,7 +399,8 @@ final class McpServer
                 throw ApiError::notFound();
             }
             if (! $link->draft_id) {
-                return ['status' => now()->greaterThan($link->expires_at) ? 'expired' : 'awaiting_upload'];
+                return ['status' => now()->greaterThan($link->expires_at) ? 'expired' : 'awaiting_upload',
+                    'assistant_hint' => 'If you can read the paystub, call submit_paystub_values with its values instead of waiting for an upload.'];
             }
             $doc = DB::table('documents')->find($link->draft_id);
         }

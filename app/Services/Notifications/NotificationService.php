@@ -164,7 +164,7 @@ final class NotificationService
         Audit::log('notification.test_sent', 'notification', null, ['status' => $res->status()]);
 
         return ['accepted' => $res->successful() && is_array($json) && ($json['queued'] ?? $json['ok'] ?? true) !== false, 'status' => $res->status(),
-            'id' => is_array($json) ? ($json['id'] ?? $json['message_id'] ?? null) : null, 'error' => is_array($json) ? ($json['error'] ?? null) : null];
+            'id' => is_array($json) ? ($json['id'] ?? $json['message_id'] ?? null) : null, 'error' => is_array($json) ? ($json['error'] ?? $json['reason'] ?? null) : null];
     }
 
     private function mark(string $id, string $status, ?int $code, ?string $error, ?string $msgId): void

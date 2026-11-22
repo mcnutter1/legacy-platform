@@ -19,6 +19,8 @@
         Require all granted
         DirectoryIndex index.php
         FallbackResource /index.php
+        # mod_proxy_fcgi drops the Authorization header unless told to pass it (MCP bearer tokens).
+        CGIPassAuth On
     </Directory>
     <DirectoryMatch "/\.(?!well-known)">
         Require all denied

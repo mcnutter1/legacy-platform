@@ -44,8 +44,12 @@ Host: shared McNutt Cloud server (`ubuntu@login.mcnutt.cloud`, 34.234.75.3). App
    app access to `notifications`, otherwise the API answers 401 `invalid_api_key`. Then
    `sudo -u mcnutt-legacy php artisan config:cache` (from `current`), sign in,
    enroll the authenticator (Settings → Security), create the workspace.
-4. Escrow `legacy.env` + `backup.key` offline (two places). Configure `OFFSITE_RSYNC_TARGET` for offsite copies.
-5. Have a CPA review and approve tax rule packs (Tax → Rule packs) before relying on "calculated" status.
+4. Property lookup works without keys (Census geocoder + NJOGIS MOD-IV parcels). Optional AVMs: `RENTCAST_API_KEY`
+   (RentCast) and `BRIDGE_ZESTIMATE_TOKEN` (Zillow via Bridge Interactive, requires their data agreement). Set
+   `PROPERTY_LOOKUP_ENABLED=false` to disable outbound lookups entirely. AVM results arrive as *proposed* valuations
+   that a person must accept.
+5. Escrow `legacy.env` + `backup.key` offline (two places). Configure `OFFSITE_RSYNC_TARGET` for offsite copies.
+6. Have a CPA review and approve tax rule packs (Tax → Rule packs) before relying on "calculated" status.
 
 ## SLOs and signals
 p95 authenticated read < 500 ms; jobs visible within one cron cycle; backups daily (RPO 24 h), restore ≤ 4 h (RTO).

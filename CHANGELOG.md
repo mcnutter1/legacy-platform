@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — property records and secured loans
+
+### Implemented
+- Add-by-address property lookup: US Census address validation, NJ MOD-IV parcel match (block, lot, qualifier, PAMS PIN,
+  class, assessed values, last-year tax, deed book/page/date, last sale, year built), ranked candidates, or search by
+  municipal code + block + lot. Links to Zillow, Realtor.com, NJ tax-assessment search and the Monmouth (OPRS) /
+  Ocean County clerk record searches.
+- Applying records stores block/lot and parcel facts on the property, adds an accepted tax-assessment valuation and
+  optional licensed AVMs (RentCast, Zillow via Bridge) as *proposed* valuations; lookup history is kept.
+- Valuation review (accept/reject proposed valuations).
+- Loans linked to homes, vehicles and boats (`collateral_type`/`collateral_id`) with a financing view: value, secured
+  debt, equity and loan-to-value. New asset detail page; vehicle make/model/year/registration fields.
+
+### Verified
+- `PropertyRecordsTest` (5 tests, faked providers). Live lookup against Census + NJOGIS after deploy.
+
+### Not verified
+- Bridge (Zillow) response parsing — no agreement/token available. RentCast parsing verified only against its docs.
+
 ## 1.0.0 — initial platform (unreleased)
 
 ### Implemented

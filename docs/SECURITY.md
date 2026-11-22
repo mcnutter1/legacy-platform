@@ -43,5 +43,9 @@ access grants, OAuth tokens, `APP_KEY`, `VAULT_ROOT_KEY`, backup key, DB credent
 - ClamAV is not installed on the host today; uploads are marked `unscanned` and released. Set `VAULT_REQUIRE_SCAN=true`
   after installing `clamav-daemon`.
 - OpenAI extraction is off by default; enabling it sends document images to OpenAI under the workspace's consent.
+- Property lookup sends the typed address (or municipality/block/lot) to `geocoding.geo.census.gov` and
+  `services2.arcgis.com` (NJOGIS parcels), and to `api.rentcast.io` / `api.bridgedataoutput.com` only when their keys are
+  set. Results are cached 24 h; owner names are not stored. Zillow, Realtor.com and the Monmouth/Ocean clerk systems are
+  outbound links only (no scraping). Requests are rate-limited (20/min/user) and require real-estate write access.
 - MFA at McNutt Cloud is not asserted in the SSO payload, hence the app's own TOTP step-up.
 - Backups exclude `legacy.env` by design; losing the escrowed env makes vault files unrecoverable.

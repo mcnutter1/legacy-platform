@@ -675,6 +675,48 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/collateral/{type}/{id}": {
+            "get": {
+                "operationId": "get_workspaces_workspace_collateral_type_id",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/debts/compare": {
             "post": {
                 "operationId": "post_workspaces_workspace_debts_compare",
@@ -2279,6 +2321,43 @@
                 ]
             }
         },
+        "/api/v1/workspaces/{workspace}/properties/{property}/public-records": {
+            "post": {
+                "operationId": "post_workspaces_workspace_properties_property_public_records",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "property",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/api/v1/workspaces/{workspace}/r/{type}": {
             "get": {
                 "operationId": "get_workspaces_workspace_r_type",
@@ -2473,6 +2552,35 @@
                     },
                     {
                         "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/real-estate/lookup": {
+            "post": {
+                "operationId": "post_workspaces_workspace_real_estate_lookup",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -3050,6 +3158,43 @@
                     },
                     {
                         "name": "unit",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/api/v1/workspaces/{workspace}/valuations/{valuation}/decision": {
+            "post": {
+                "operationId": "post_workspaces_workspace_valuations_valuation_decision",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "202": {
+                        "description": "Accepted (job queued)"
+                    },
+                    "4XX": {
+                        "$ref": "#/components/responses/Error"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/IdempotencyKey"
+                    },
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "valuation",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -6078,6 +6223,22 @@
                         "type": "string",
                         "pattern": "^-?\\d+(\\.\\d+)?$",
                         "description": "Decimal string (money)"
+                    },
+                    "make": {
+                        "type": "string"
+                    },
+                    "model": {
+                        "type": "string"
+                    },
+                    "model_year": {
+                        "type": "integer"
+                    },
+                    "registration_state": {
+                        "type": "string"
+                    },
+                    "registration_expires_on": {
+                        "type": "string",
+                        "format": "date"
                     }
                 },
                 "required": [
@@ -7592,6 +7753,101 @@
                             "under_contract",
                             "sold"
                         ]
+                    },
+                    "normalized_address": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "county": {
+                        "type": "string"
+                    },
+                    "municipality": {
+                        "type": "string"
+                    },
+                    "mun_code": {
+                        "type": "string"
+                    },
+                    "block": {
+                        "type": "string"
+                    },
+                    "lot": {
+                        "type": "string"
+                    },
+                    "qualifier": {
+                        "type": "string"
+                    },
+                    "parcel_pin": {
+                        "type": "string"
+                    },
+                    "latitude": {
+                        "type": "string",
+                        "description": "Decimal string (price)"
+                    },
+                    "longitude": {
+                        "type": "string",
+                        "description": "Decimal string (price)"
+                    },
+                    "property_class": {
+                        "type": "string"
+                    },
+                    "year_built": {
+                        "type": "integer"
+                    },
+                    "living_area_sqft": {
+                        "type": "integer"
+                    },
+                    "lot_acres": {
+                        "type": "string",
+                        "description": "Decimal string"
+                    },
+                    "assessed_land": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "assessed_improvement": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "assessed_total": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "annual_property_tax": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "deed_book": {
+                        "type": "string"
+                    },
+                    "deed_page": {
+                        "type": "string"
+                    },
+                    "deed_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "last_sale_price": {
+                        "type": "string",
+                        "pattern": "^-?\\d+(\\.\\d+)?$",
+                        "description": "Decimal string (money)"
+                    },
+                    "records_source": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "records_refreshed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "address_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -7599,6 +7855,54 @@
                     "kind"
                 ],
                 "description": "Properties (real_estate)"
+            },
+            "PropertyLookups": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "scope_id": {
+                        "type": "string"
+                    },
+                    "edit_version": {
+                        "type": "integer"
+                    },
+                    "_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "property_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "query": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "sources": {
+                        "type": [
+                            "object",
+                            "array"
+                        ],
+                        "readOnly": true
+                    },
+                    "result": {
+                        "type": [
+                            "object",
+                            "array"
+                        ],
+                        "readOnly": true
+                    },
+                    "selected_pin": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [],
+                "description": "Public record lookups (real_estate)"
             },
             "PropertyStays": {
                 "type": "object",
@@ -13511,6 +13815,9 @@
             "list": [
                 "name",
                 "kind",
+                "make",
+                "model",
+                "model_year",
                 "acquired_on",
                 "cost",
                 "status"
@@ -13680,6 +13987,56 @@
                 {
                     "name": "unfunded_commitment",
                     "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "make",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "model",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "model_year",
+                    "type": "y",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "registration_state",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "registration_expires_on",
+                    "type": "d",
                     "required": false,
                     "readonly": false,
                     "values": null,
@@ -16153,6 +16510,8 @@
                 "kind",
                 "city",
                 "state",
+                "block",
+                "lot",
                 "acquired_on",
                 "purchase_price",
                 "status"
@@ -16161,7 +16520,7 @@
             "creatable": true,
             "parent": null,
             "unscoped": false,
-            "searchable": false,
+            "searchable": true,
             "date": null,
             "fields": [
                 {
@@ -16375,6 +16734,325 @@
                         "under_contract",
                         "sold"
                     ],
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "normalized_address",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": "identity"
+                },
+                {
+                    "name": "county",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "municipality",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "mun_code",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "block",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "lot",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "qualifier",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "parcel_pin",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "latitude",
+                    "type": "p",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": "identity"
+                },
+                {
+                    "name": "longitude",
+                    "type": "p",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": "identity"
+                },
+                {
+                    "name": "property_class",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "year_built",
+                    "type": "y",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "living_area_sqft",
+                    "type": "i",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "lot_acres",
+                    "type": "pct",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "assessed_land",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "assessed_improvement",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "assessed_total",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "annual_property_tax",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "deed_book",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "deed_page",
+                    "type": "s",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "deed_date",
+                    "type": "d",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "last_sale_price",
+                    "type": "m",
+                    "required": false,
+                    "readonly": false,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "records_source",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "records_refreshed_at",
+                    "type": "dt",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "address_verified_at",
+                    "type": "dt",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                }
+            ]
+        },
+        "property_lookups": {
+            "type": "property_lookups",
+            "label": "Public record lookups",
+            "domain": "real_estate",
+            "title": null,
+            "list": [
+                "query",
+                "selected_pin",
+                "created_at"
+            ],
+            "readonly": true,
+            "creatable": false,
+            "parent": "property_id",
+            "unscoped": false,
+            "searchable": false,
+            "date": null,
+            "fields": [
+                {
+                    "name": "property_id",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "query",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": "identity"
+                },
+                {
+                    "name": "sources",
+                    "type": "j",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": null
+                },
+                {
+                    "name": "result",
+                    "type": "j",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
+                    "ref": null,
+                    "poly_type_field": null,
+                    "sensitive": "identity"
+                },
+                {
+                    "name": "selected_pin",
+                    "type": "s",
+                    "required": false,
+                    "readonly": true,
+                    "values": null,
                     "ref": null,
                     "poly_type_field": null,
                     "sensitive": null
@@ -16894,7 +17572,8 @@
                 "current_balance",
                 "interest_rate",
                 "payment_amount",
-                "maturity_on",
+                "collateral_type",
+                "collateral_id",
                 "status"
             ],
             "readonly": false,

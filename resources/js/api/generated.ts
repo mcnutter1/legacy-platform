@@ -708,6 +708,11 @@ export interface Assets {
   disposed_on?: ISODate | null;
   disposal_amount?: Decimal | null;
   unfunded_commitment?: Decimal | null;
+  make?: string | null;
+  model?: string | null;
+  model_year?: number | null;
+  registration_state?: string | null;
+  registration_expires_on?: ISODate | null;
 }
 
 export interface Valuations {
@@ -1107,6 +1112,47 @@ export interface Properties {
   fmv_at_conversion?: Decimal | null;
   entity_id?: Ulid | null;
   status?: 'owned' | 'under_contract' | 'sold' | null;
+  normalized_address?: string | null;
+  county?: string | null;
+  municipality?: string | null;
+  mun_code?: string | null;
+  block?: string | null;
+  lot?: string | null;
+  qualifier?: string | null;
+  parcel_pin?: string | null;
+  latitude?: Decimal | null;
+  longitude?: Decimal | null;
+  property_class?: string | null;
+  year_built?: number | null;
+  living_area_sqft?: number | null;
+  lot_acres?: Decimal | null;
+  assessed_land?: Decimal | null;
+  assessed_improvement?: Decimal | null;
+  assessed_total?: Decimal | null;
+  annual_property_tax?: Decimal | null;
+  deed_book?: string | null;
+  deed_page?: string | null;
+  deed_date?: ISODate | null;
+  last_sale_price?: Decimal | null;
+  records_source?: string | null;
+  records_refreshed_at?: string | null;
+  address_verified_at?: string | null;
+}
+
+export interface PropertyLookups {
+  id: Ulid;
+  type: 'property_lookups';
+  scope_id?: Ulid;
+  edit_version: number;
+  _title: string | null;
+  _redacted?: string[];
+  created_at: string | null;
+  updated_at: string | null;
+  property_id?: string | null;
+  query?: string | null;
+  sources?: unknown | null;
+  result?: unknown | null;
+  selected_pin?: string | null;
 }
 
 export interface PropertyStays {
@@ -1575,6 +1621,7 @@ export interface ResourceTypes {
   tax_runs: TaxRuns;
   tax_strategies: TaxStrategies;
   properties: Properties;
+  property_lookups: PropertyLookups;
   property_stays: PropertyStays;
   property_use_logs: PropertyUseLogs;
   property_improvements: PropertyImprovements;

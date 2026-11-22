@@ -83,6 +83,21 @@ return [
         'timeout' => 45,
     ],
 
+    // Public-record and valuation lookups for real property. Hosts are fixed here; nothing user-supplied is fetched.
+    'property_lookup' => [
+        'enabled' => (bool) env('PROPERTY_LOOKUP_ENABLED', true),
+        'timeout' => (int) env('PROPERTY_LOOKUP_TIMEOUT', 8),
+        'cache_hours' => 24,
+        'census_url' => 'https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress',
+        'nj_parcels_url' => 'https://services2.arcgis.com/XVOqAjTOJ5P6ngMu/arcgis/rest/services/Parcels_Composite_NJ_WM/FeatureServer/0/query',
+        'nj_search_radius_m' => 120,
+        // Licensed valuation feeds (optional). Zillow data is only available through Zillow's Bridge API under agreement.
+        'rentcast_api_key' => env('RENTCAST_API_KEY'),
+        'rentcast_url' => 'https://api.rentcast.io/v1/avm/value',
+        'bridge_token' => env('BRIDGE_ZESTIMATE_TOKEN'),
+        'bridge_url' => 'https://api.bridgedataoutput.com/api/v2/zestimates_v2/zestimates',
+    ],
+
     'mcp' => [
         'enabled' => (bool) env('MCP_ENABLED', true),
         'protocol_versions' => ['2025-11-25', '2025-06-18', '2025-03-26'],

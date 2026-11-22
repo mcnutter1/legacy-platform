@@ -48,6 +48,7 @@ const router = createBrowserRouter([
       { path: 'portfolio', element: page(() => import('./pages/Portfolio')) },
       { path: 'real-estate', element: page(() => import('./pages/RealEstate')) },
       { path: 'real-estate/:id', element: page(() => import('./pages/PropertyDetail')) },
+      { path: 'assets/:id', element: page(() => import('./pages/AssetDetail')) },
       { path: 'assets', element: page(() => import('./pages/Assets')) },
       { path: 'debts', element: page(() => import('./pages/Debts')) },
       { path: 'imports', element: page(() => import('./pages/Imports')) },

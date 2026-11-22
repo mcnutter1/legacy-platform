@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AccessController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\PlanningController;
+use App\Http\Controllers\Api\PropertyController;
 use App\Http\Controllers\Api\ResourceController;
 use App\Http\Controllers\Api\RiskController;
 use App\Http\Controllers\Api\TaxController;
@@ -108,6 +109,12 @@ Route::prefix('api/v1')->middleware(['central', 'throttle:api', 'idempotent'])->
         Route::post('/year-close/{snapshot}/reopen', [WealthController::class, 'reopenYear']);
         Route::post('/ledger/periods/close', [WealthController::class, 'closePeriod']);
         Route::post('/ledger/periods/{close}/reopen', [WealthController::class, 'reopenPeriod']);
+
+        // Real property records, secured loans, valuation review
+        Route::post('/real-estate/lookup', [PropertyController::class, 'lookup']);
+        Route::post('/properties/{property}/public-records', [PropertyController::class, 'applyPublicRecords']);
+        Route::get('/collateral/{type}/{id}', [PropertyController::class, 'financing'])->where(['type' => 'property|asset', 'id' => $ulid]);
+        Route::post('/valuations/{valuation}/decision', [PropertyController::class, 'decideValuation']);
 
         // Vault, extraction, payroll, imports
         Route::post('/vault/documents', [VaultController::class, 'upload']);

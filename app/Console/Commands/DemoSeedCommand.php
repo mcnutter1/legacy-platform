@@ -52,8 +52,11 @@ class DemoSeedCommand extends Command
 
         $checking = $mk('accounts', ['name' => 'Joint checking', 'institution' => 'Example Bank', 'kind' => 'checking', 'tax_bucket' => 'taxable', 'mask' => '1234']);
         $brokerage = $mk('accounts', ['name' => 'Joint brokerage', 'institution' => 'Example Brokerage', 'kind' => 'brokerage', 'tax_bucket' => 'taxable']);
-        $ira = $mk('accounts', ['name' => 'Alex 401(k)', 'institution' => 'Example Recordkeeper', 'kind' => '401k', 'tax_bucket' => 'pretax', 'owner_person_id' => $alex->id]);
-        $roth = $mk('accounts', ['name' => 'Jordan Roth IRA', 'institution' => 'Example Brokerage', 'kind' => 'roth_ira', 'tax_bucket' => 'roth', 'owner_person_id' => $jordan->id]);
+        $ira = $mk('accounts', ['name' => 'Alex 401(k)', 'institution' => 'Example Recordkeeper', 'kind' => '401k', 'tax_bucket' => 'pretax']);
+        $roth = $mk('accounts', ['name' => 'Jordan Roth IRA', 'institution' => 'Example Brokerage', 'kind' => 'roth_ira', 'tax_bucket' => 'roth']);
+        foreach ([[$ira, $alex], [$roth, $jordan]] as [$a, $person]) {
+            $mk('ownership_interests', ['owner_type' => 'person', 'owner_id' => $person->id, 'subject_type' => 'account', 'subject_id' => $a->id, 'fraction' => '1', 'title_form' => 'sole']);
+        }
         $college = $mk('accounts', ['name' => 'NJBEST 529', 'institution' => 'Example 529', 'kind' => '529', 'tax_bucket' => 'education']);
         foreach ([[$checking, '48250.00'], [$ira, '612400.00'], [$roth, '148900.00'], [$college, '86300.00']] as [$a, $bal]) {
             $mk('balance_snapshots', ['account_id' => $a->id, 'as_of' => now()->subDays(3)->toDateString(), 'balance' => $bal]);

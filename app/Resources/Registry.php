@@ -261,7 +261,7 @@ final class Registry
                 'domain' => 'ledger', 'label' => 'Accounts', 'title' => 'name', 'order' => ['name', 'asc'],
                 'fields' => [
                     'name' => 's!', 'institution' => 's', 'kind' => 'e:'.self::ACCOUNT_KINDS.'!', 'tax_bucket' => 'e:'.self::TAX_BUCKETS,
-                    'currency' => 'cur', 'mask' => 's', 'owner_person_id' => 'ref:persons', 'owner_entity_id' => 'ref:legal_entities',
+                    'currency' => 'cur', 'mask' => 's', 'owner_person_id' => '~ref:persons', 'owner_entity_id' => '~ref:legal_entities',
                     'connection_id' => 'ref:source_connections', 'external_ref' => 's', 'opened_on' => 'd', 'closed_on' => 'd',
                     'status' => 'e:open|closed|frozen', 'liquidity' => 'e:daily|t_plus|monthly|quarterly|restricted|illiquid', 'restrictions' => 't', 'is_liability' => 'b',
                     'visibility' => '~e:visible|hidden|ignored', 'visibility_reason' => '~s', 'source_roles' => '~j',
@@ -353,7 +353,7 @@ final class Registry
                 'fields' => [
                     'name' => 's!', 'kind' => 'e:vehicle|boat|aircraft|jewelry|art|collectible|wine|business_interest|private_fund|digital_asset|intellectual_property|receivable|other!',
                     'description' => 't', 'serial_number' => 's', 'location' => 's', 'acquired_on' => 'd', 'cost' => 'm', 'currency' => 'cur',
-                    'entity_id' => 'ref:legal_entities', 'liquidity' => 'e:daily|monthly|quarterly|restricted|illiquid', 'status' => 'e:owned|sold|gifted|lost',
+                    'entity_id' => '~ref:legal_entities', 'liquidity' => 'e:daily|monthly|quarterly|restricted|illiquid', 'status' => 'e:owned|sold|gifted|lost',
                     'disposed_on' => 'd', 'disposal_amount' => 'm', 'unfunded_commitment' => 'm',
                     'make' => 's', 'model' => 's', 'model_year' => 'y', 'registration_state' => 's', 'registration_expires_on' => 'd',
                 ],
@@ -507,7 +507,7 @@ final class Registry
                     'name' => 's!', 'kind' => 'e:'.self::PROPERTY_KINDS.'!', 'address_line' => 's', 'city' => 's', 'state' => 's', 'postal_code' => 's', 'country' => 's',
                     'acquired_on' => 'd', 'purchase_price' => 'm', 'closing_costs' => 'm', 'land_value' => 'm', 'building_value' => 'm', 'placed_in_service_on' => 'd',
                     'recovery_years' => 'pct', 'depreciation_method' => 'e:SL-MM|none', 'prior_depreciation' => 'm', 'converted_to_rental_on' => 'd',
-                    'fmv_at_conversion' => 'm', 'entity_id' => 'ref:legal_entities', 'status' => 'e:owned|under_contract|sold',
+                    'fmv_at_conversion' => 'm', 'entity_id' => '~ref:legal_entities', 'status' => 'e:owned|under_contract|sold',
                     'normalized_address' => '~s', 'county' => 's', 'municipality' => 's', 'mun_code' => 's', 'block' => 's', 'lot' => 's', 'qualifier' => 's',
                     'parcel_pin' => 's', 'latitude' => 'p', 'longitude' => 'p', 'property_class' => 's', 'year_built' => 'y', 'living_area_sqft' => 'i',
                     'lot_acres' => 'pct', 'assessed_land' => 'm', 'assessed_improvement' => 'm', 'assessed_total' => 'm', 'annual_property_tax' => 'm',

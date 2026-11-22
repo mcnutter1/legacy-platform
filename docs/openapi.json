@@ -6623,11 +6623,13 @@
                     },
                     "owner_person_id": {
                         "type": "string",
-                        "description": "ULID"
+                        "description": "ULID",
+                        "readOnly": true
                     },
                     "owner_entity_id": {
                         "type": "string",
-                        "description": "ULID"
+                        "description": "ULID",
+                        "readOnly": true
                     },
                     "connection_id": {
                         "type": "string",
@@ -7579,7 +7581,8 @@
                     },
                     "entity_id": {
                         "type": "string",
-                        "description": "ULID"
+                        "description": "ULID",
+                        "readOnly": true
                     },
                     "liquidity": {
                         "type": "string",
@@ -9134,7 +9137,8 @@
                     },
                     "entity_id": {
                         "type": "string",
-                        "description": "ULID"
+                        "description": "ULID",
+                        "readOnly": true
                     },
                     "status": {
                         "type": "string",
@@ -14253,7 +14257,7 @@
                     "name": "owner_person_id",
                     "type": "ref",
                     "required": false,
-                    "readonly": false,
+                    "readonly": true,
                     "values": null,
                     "ref": "persons",
                     "poly_type_field": null,
@@ -14263,7 +14267,7 @@
                     "name": "owner_entity_id",
                     "type": "ref",
                     "required": false,
-                    "readonly": false,
+                    "readonly": true,
                     "values": null,
                     "ref": "legal_entities",
                     "poly_type_field": null,
@@ -15974,7 +15978,7 @@
                     "name": "entity_id",
                     "type": "ref",
                     "required": false,
-                    "readonly": false,
+                    "readonly": true,
                     "values": null,
                     "ref": "legal_entities",
                     "poly_type_field": null,
@@ -18765,7 +18769,7 @@
                     "name": "entity_id",
                     "type": "ref",
                     "required": false,
-                    "readonly": false,
+                    "readonly": true,
                     "values": null,
                     "ref": "legal_entities",
                     "poly_type_field": null,

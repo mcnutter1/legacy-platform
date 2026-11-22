@@ -3,6 +3,7 @@
 namespace App\Resources;
 
 use App\Models\Record;
+use App\Services\TitleService;
 use App\Support\AccessContext;
 use App\Support\ApiError;
 use App\Support\Audit;
@@ -170,6 +171,7 @@ final class ResourceService
             $m->save();
             Audit::log("{$type}.created", $type, $m->id, ['fields' => array_keys($data)], scopeId: $scopeId);
             Outbox::publish('record.created', ['type' => $type, 'id' => $m->id], $type, $m->id);
+            $type === 'ownership_interests' && TitleService::syncDerived($this->ctx->workspace->id, (string) $m->subject_type, (string) $m->subject_id);
 
             return $m->fresh() ?? $m;
         });
@@ -200,6 +202,11 @@ final class ResourceService
             }
             Audit::log("{$type}.updated", $type, $row->id, ['fields' => array_keys($data)], scopeId: $data['scope_id'] ?? $row->scope_id);
             Outbox::publish('record.updated', ['type' => $type, 'id' => $row->id, 'fields' => array_keys($data)], $type, $row->id);
+            if ($type === 'ownership_interests') {
+                $fresh = DB::table('ownership_interests')->find($row->id);
+                TitleService::syncDerived($this->ctx->workspace->id, (string) $row->subject_type, (string) $row->subject_id);
+                ($fresh->subject_id ?? null) !== $row->subject_id && TitleService::syncDerived($this->ctx->workspace->id, (string) $fresh->subject_type, (string) $fresh->subject_id);
+            }
 
             return $this->find($type, $row->id);
         });
@@ -218,6 +225,7 @@ final class ResourceService
                 ->update(['archived_at' => now(), 'edit_version' => $row->edit_version + 1, 'updated_by' => $this->ctx->user->id]);
             Audit::log("{$type}.archived", $type, $row->id, scopeId: $row->scope_id);
             Outbox::publish('record.archived', ['type' => $type, 'id' => $row->id], $type, $row->id);
+            $type === 'ownership_interests' && TitleService::syncDerived($this->ctx->workspace->id, (string) $row->subject_type, (string) $row->subject_id);
         });
     }
 

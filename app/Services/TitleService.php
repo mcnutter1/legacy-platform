@@ -24,6 +24,27 @@ final class TitleService
         'entity' => 'Held by an entity',
     ];
 
+    /** Subject columns that mirror the Ownership tab for older readers: a single person or entity owner, else empty. */
+    public const DERIVED = ['account' => ['person' => 'owner_person_id', 'entity' => 'owner_entity_id'], 'property' => ['entity' => 'entity_id'], 'asset' => ['entity' => 'entity_id']];
+
+    public static function syncDerived(string $workspaceId, string $type, string $subjectId): void
+    {
+        $cols = self::DERIVED[$type] ?? null;
+        if (! $cols) {
+            return;
+        }
+        $today = now()->toDateString();
+        $rows = DB::table('ownership_interests')->where('workspace_id', $workspaceId)->where('subject_type', $type)->where('subject_id', $subjectId)
+            ->where('basis', 'legal_title')->whereNull('archived_at')
+            ->where(fn ($q) => $q->whereNull('effective_from')->orWhere('effective_from', '<=', $today))
+            ->where(fn ($q) => $q->whereNull('effective_to')->orWhere('effective_to', '>=', $today))->get(['owner_type', 'owner_id']);
+        $set = array_fill_keys(array_values($cols), null);
+        if ($rows->count() === 1 && isset($cols[$rows[0]->owner_type])) {
+            $set[$cols[$rows[0]->owner_type]] = $rows[0]->owner_id;
+        }
+        DB::table(self::SUBJECTS[$type][0])->where('workspace_id', $workspaceId)->where('id', $subjectId)->update($set);
+    }
+
     public function __construct(private readonly AccessContext $ctx) {}
 
     public function current(string $type, string $id): array
@@ -74,7 +95,7 @@ final class TitleService
         }
         $n = count($owners);
         $persons = array_filter($owners, fn ($o) => $o['owner_type'] === 'person');
-        $equal = in_array($form, ['jtwros', 'tenancy_by_entirety', 'community'], true);
+        $equal = in_array($form, ['jtwros', 'tenancy_by_entirety', 'community'], true) || $n === 1;
         match ($form) {
             'sole' => $n === 1 ?: throw new ApiError('validation_failed', 'Sole ownership has exactly one owner.', 422),
             'jtwros', 'tenants_in_common' => $n >= 2 ?: throw new ApiError('validation_failed', 'Joint ownership needs at least two owners.', 422),
@@ -120,6 +141,7 @@ final class TitleService
                 ]);
             }
             Audit::log('ownership.title_set', $type, $subject->id, ['title_form' => $form, 'owners' => count($owners), 'effective_from' => $from], scopeId: $subject->scope_id);
+            self::syncDerived($this->ctx->workspace->id, $type, $subject->id);
         });
 
         return $this->current($type, $subject->id);

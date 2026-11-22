@@ -49,6 +49,30 @@ class TitleTest extends TestCase
         $this->assertSame(['tenants_in_common', 'tenants_in_common'], $this->getJson($this->wsUrl($ws, "title/property/{$home}"))->json('data.owners.*.title_form'));
     }
 
+    public function test_ownership_tab_drives_the_account_owner_field(): void
+    {
+        $u = $this->makeUser('owner');
+        [$ws, , $joint] = $this->makeWorkspace($u);
+        $this->signIn($u);
+        $person = fn (string $n) => $this->send('POST', $this->wsUrl($ws, 'r/persons'), ['scope_id' => $joint->id, 'display_name' => $n])->assertCreated()->json('data.id');
+        [$alex, $jordan] = [$person('Alex Example'), $person('Jordan Example')];
+        $acct = $this->send('POST', $this->wsUrl($ws, 'r/accounts'), ['scope_id' => $joint->id, 'name' => 'Brokerage', 'kind' => 'brokerage', 'owner_person_id' => $alex])
+            ->assertCreated()->json('data');
+        $this->assertNull($acct['owner_person_id'], 'owner is not set from the edit form');
+        $owner = fn () => DB::table('accounts')->where('id', $acct['id'])->value('owner_person_id');
+
+        $this->send('PUT', $this->wsUrl($ws, "title/account/{$acct['id']}"), ['title_form' => 'sole', 'owners' => [['owner_type' => 'person', 'owner_id' => $alex]]])->assertOk();
+        $this->assertSame($alex, $owner());
+        $this->send('PUT', $this->wsUrl($ws, "title/account/{$acct['id']}"), ['title_form' => 'jtwros', 'owners' => [['owner_type' => 'person', 'owner_id' => $alex], ['owner_type' => 'person', 'owner_id' => $jordan]]])->assertOk();
+        $this->assertNull($owner(), 'joint title has no single owner');
+
+        // Generic ownership records (e.g. from the People & entities screen) keep it in sync too.
+        $other = $this->send('POST', $this->wsUrl($ws, 'r/accounts'), ['scope_id' => $joint->id, 'name' => 'IRA', 'kind' => 'ira'])->json('data.id');
+        $this->send('POST', $this->wsUrl($ws, 'r/ownership_interests'), ['scope_id' => $joint->id, 'owner_type' => 'person', 'owner_id' => $jordan, 'subject_type' => 'account',
+            'subject_id' => $other, 'fraction' => '1', 'basis' => 'legal_title'])->assertCreated();
+        $this->assertSame($jordan, DB::table('accounts')->where('id', $other)->value('owner_person_id'));
+    }
+
     public function test_changing_title_needs_household_write(): void
     {
         $u = $this->makeUser('owner');

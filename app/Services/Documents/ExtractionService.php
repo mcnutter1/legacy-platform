@@ -20,7 +20,7 @@ final class ExtractionService
 
     private const PAYSTUB_FIELDS = ['employer', 'pay_date', 'period_start', 'period_end', 'gross', 'net', 'federal_taxable_wages', 'state_wages',
         'federal_withholding', 'social_security', 'medicare', 'nj_withholding', 'nj_sdi', 'nj_fli', 'nj_ui', 'pretax_401k', 'roth_401k', 'hsa', 'fsa',
-        'medical_premium', 'dental', 'vision', 'espp', 'rsu_income', 'bonus'];
+        'medical_premium', 'dental', 'vision', 'espp', 'rsu_income', 'bonus', 'post_tax_deductions', 'net_adjustments'];
 
     public function providerAvailable(AccessContext $ctx): bool
     {

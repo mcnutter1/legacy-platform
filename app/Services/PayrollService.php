@@ -15,7 +15,7 @@ final class PayrollService
 {
     public const AMOUNT_FIELDS = ['gross', 'net', 'federal_taxable_wages', 'state_wages', 'ss_wages', 'medicare_wages', 'federal_withholding', 'social_security',
         'medicare', 'nj_withholding', 'nj_sdi', 'nj_fli', 'nj_ui', 'pretax_401k', 'roth_401k', 'hsa', 'fsa', 'medical_premium', 'dental', 'vision',
-        'espp', 'rsu_income', 'bonus', 'deferred_comp'];
+        'espp', 'rsu_income', 'bonus', 'deferred_comp', 'post_tax_deductions', 'net_adjustments'];
 
     public function approveExtraction(AccessContext $ctx, string $extractionId, array $data): array
     {
@@ -103,11 +103,12 @@ final class PayrollService
         if (isset($current['net'])) {
             $ded = '0';
             foreach (self::AMOUNT_FIELDS as $k) {
-                if (! in_array($k, ['gross', 'net', 'federal_taxable_wages', 'state_wages', 'ss_wages', 'medicare_wages', 'bonus', 'rsu_income', 'espp'], true) && isset($current[$k])) {
+                if (! in_array($k, ['gross', 'net', 'federal_taxable_wages', 'state_wages', 'ss_wages', 'medicare_wages', 'bonus', 'rsu_income', 'espp', 'net_adjustments'], true) && isset($current[$k])) {
                     $ded = Dec::add($ded, $current[$k]);
                 }
             }
-            $diff = Dec::sub(Dec::sub($current['gross'], $ded), $current['net']);
+            // Net adjustments are after-tax additions (e.g. expense reimbursements) that raise net pay.
+            $diff = Dec::sub(Dec::add(Dec::sub($current['gross'], $ded), $current['net_adjustments'] ?? '0'), $current['net']);
             $out[] = ['check' => 'net_components', 'passed' => Dec::cmp(Dec::abs($diff), '1.00') <= 0, 'blocking' => false,
                 'message' => Dec::cmp(Dec::abs($diff), '1.00') <= 0 ? 'Gross minus deductions equals net.' : "Unexplained difference of {$diff} between gross, deductions and net (imputed income or unlisted deductions)."];
             if (Dec::cmp($current['net'], $current['gross']) > 0) {

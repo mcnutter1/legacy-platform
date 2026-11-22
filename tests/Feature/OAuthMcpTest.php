@@ -160,6 +160,10 @@ class OAuthMcpTest extends TestCase
         $viaOld = $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'start_paystub_intake', 'arguments' => ['employment_id' => $emp, 'idempotency_key' => 'old-tool-values',
             'values' => ['pay_date' => '2026-10-30', 'gross' => ['current' => '5000.00', 'ytd' => '105000.00']]]])->json('result.structuredContent');
         $this->assertSame('awaiting_review', $viaOld['status']);
+        $withAfterTax = $call(['employment_id' => $emp, 'idempotency_key' => 'after-tax-lines', 'values' => ['pay_date' => '2026-10-16', 'gross' => ['current' => '1000'],
+            'federal_withholding' => ['current' => '100'], 'post_tax_deductions' => ['current' => '40'], 'net_adjustments' => ['current' => '15'], 'net' => ['current' => '875']]])
+            ->json('result.structuredContent');
+        $this->assertTrue(collect($withAfterTax['checks'])->firstWhere('check', 'net_components')['passed'], 'after-tax deductions and reimbursements reconcile net pay');
         $link = $this->rpc($tokens['access_token'], 'tools/call', ['name' => 'start_paystub_intake', 'arguments' => ['employment_id' => $emp, 'idempotency_key' => 'old-tool-link']])
             ->json('result.structuredContent');
         $this->assertStringContainsString('submit_paystub_values', $link['assistant_hint']);
